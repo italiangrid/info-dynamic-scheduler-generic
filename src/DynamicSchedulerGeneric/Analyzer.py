@@ -15,6 +15,6 @@
 # limitations under the License.
 
 
-def analyze(config, vomap, maxjobTable):
+def analyze(config, maxjobTable):
     return None
 
