@@ -15,40 +15,39 @@
 # limitations under the License.
 
 import unittest
+import sys
 
 from DynamicSchedulerGeneric import Utils as DynSchedUtils
+
 from TestUtils import Workspace
 
 class UtilsTestCase(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.vomap = {"atlasprod": "atlas",
+                      "atlassgm": "atlas",
+                      "dteamgold": "dteam",
+                      "dteamsilver": "dteam",
+                      "dteambronze": "dteam",
+                      "infngridlow": "infngrid",
+                      "infngridmedium": "infngrid",
+                      "infngridhigh": "infngrid"}
+        self.mjTable = {"atlasprod": 20,
+                        "atlassgm": 30,
+                        "dteamgold": 50,
+                        "dteamsilver": 40,
+                        "dteambronze": 60,
+                        "infngridlow": 110,
+                        "infngridmedium": 120,
+                        "infngridhigh": 130}
         
     def tearDown(self):
         pass
 
     def test_getMaxJobsTable_ok(self):
         try:
-            vomap = {"atlasprod": "atlas",
-                     "atlassgm": "atlas",
-                     "dteamgold": "dteam",
-                     "dteamsilver": "dteam",
-                     "dteambronze": "dteam",
-                     "infngridlow": "infngrid",
-                     "infngridmedium": "infngrid",
-                     "infngridhigh": "infngrid"}
-                     
-            mjTable = {"atlasprod": 20,
-                       "atlassgm": 30,
-                       "dteamgold": 50,
-                       "dteamsilver": 40,
-                       "dteambronze": 60,
-                       "infngridlow": 110,
-                       "infngridmedium": 120,
-                       "infngridhigh": 130}
-            
-            workspace = Workspace(vomap = vomap)
-            workspace.setMaxJobCmd(mjTable)
+            workspace = Workspace(vomap = self.vomap)
+            workspace.setMaxJobCmd(self.mjTable)
             
             cfgfile = workspace.getConfigurationFile()
             config = DynSchedUtils.readConfigurationFromFile(cfgfile)
@@ -60,7 +59,41 @@ class UtilsTestCase(unittest.TestCase):
                 
         except Exception, test_error:
             self.fail(repr(test_error))
+
+
+    def test_getMaxJobsTable_wrongexit(self):
+        try:
+            workspace = Workspace(vomap = self.vomap)
+            script = """#!/bin/bash
+exit 1
+"""
+            workspace.setMaxJobCmd(script)
+            
+            cfgfile = workspace.getConfigurationFile()
+            config = DynSchedUtils.readConfigurationFromFile(cfgfile)
+            result = DynSchedUtils.getMaxJobsTable(config)
         
+        except DynSchedUtils.UtilsException, test_error:
+            msg = str(test_error)
+            self.assertTrue(msg.startswith("VO max jobs backend command returned"))
+        except Exception, generic_error:
+            self.fail(repr(test_error))
+        
+
+    def test_getMaxJobsTable_nofile(self):
+        try:
+            workspace = Workspace(vomap = self.vomap)
+            
+            cfgfile = workspace.getConfigurationFile()
+            config = DynSchedUtils.readConfigurationFromFile(cfgfile)
+            result = DynSchedUtils.getMaxJobsTable(config)
+        
+        except DynSchedUtils.UtilsException, test_error:
+            msg = str(test_error)
+            self.assertTrue(msg.startswith("Error running"))
+        except Exception, generic_error:
+            self.fail(repr(test_error))
+       
 if __name__ == '__main__':
     unittest.main()
 

@@ -37,7 +37,9 @@ def usage():
     print "Usage: lcg-info-dynamic-scheduler -c <cfg_file>"
 
 def abort_without_output(msg):
-    print("++++ %s ++++" % msg)
+    #
+    # TODO log error
+    #
     sys.exit(2)
 
 
@@ -78,7 +80,6 @@ def main():
 
     vomap = config.get('Main','vomap')
     mjobTable = DynSchedUtils.getMaxJobsTable(config)
-    print mjobTable
     data = Analyzer.analyze(config, mjobTable)
 
     if outputformat & GLUE1FORMAT:

@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import os, os.path, stat
+import shutil
 import types
 import ConfigParser
 
@@ -26,9 +27,9 @@ class Workspace:
             self.workspace = args["workspacedir"]
         else:
             self.workspace = "/tmp/dynschedtest"
-        if not os.path.exists(self.workspace):
-            os.mkdir(self.workspace)
-        
+        if os.path.exists(self.workspace):
+            shutil.rmtree(self.workspace)
+        os.mkdir(self.workspace)            
         
         self.configFilename = self.workspace + "/scheduler.conf"
         

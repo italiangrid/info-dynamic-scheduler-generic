@@ -18,6 +18,12 @@ import shlex
 import subprocess
 import ConfigParser
 
+class UtilsException(Exception):
+    
+    def __init__(self, msg):
+        Exception.__init__(self, msg)
+        
+
 def readConfigurationFromFile(configfile):
 
     config = ConfigParser.ConfigParser()
@@ -54,7 +60,7 @@ def getMaxJobsTable(config):
         process = subprocess.Popen(shlex.split(raw_cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stdoutdata, stderrdata) = process.communicate()
         if process.returncode:
-            raise Exception("VO max jobs backend command returned " + process.returncode)
+            raise UtilsException("VO max jobs backend command returned " + str(process.returncode))
 
         #
         # TODO replace with a simple parser, get rid of the eval()
@@ -80,8 +86,8 @@ def getMaxJobsTable(config):
         return result
         
     except OSError, os_error:
-        raise Exception('Error running "%s": %s' % (raw_cmd, repr(os_error)))
+        raise UtilsException('Error running "%s": %s' % (raw_cmd, repr(os_error)))
     except ValueError, value_error:
-        raise Exception('Wrong arguments for "%s": %s' % (raw_cmd, repr(value_error)))
+        raise UtilsException('Wrong arguments for "%s": %s' % (raw_cmd, repr(value_error)))
 
 
