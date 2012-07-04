@@ -1,1 +1,1 @@
-__all__ = ["AnalyzerTestSuite", "UtilsTestSuite"]
+__all__ = ["AnalyzerTestSuite", "UtilsTestSuite", "TestUtils"]

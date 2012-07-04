@@ -16,10 +16,51 @@
 
 import unittest
 
+from DynamicSchedulerGeneric import Utils as DynSchedUtils
+from TestUtils import Workspace
+
 class UtilsTestCase(unittest.TestCase):
 
     def setUp(self):
         pass
+        
     def tearDown(self):
         pass
+
+    def test_getMaxJobsTable_ok(self):
+        try:
+            vomap = {"atlasprod": "atlas",
+                     "atlassgm": "atlas",
+                     "dteamgold": "dteam",
+                     "dteamsilver": "dteam",
+                     "dteambronze": "dteam",
+                     "infngridlow": "infngrid",
+                     "infngridmedium": "infngrid",
+                     "infngridhigh": "infngrid"}
+                     
+            mjTable = {"atlasprod": 20,
+                       "atlassgm": 30,
+                       "dteamgold": 50,
+                       "dteamsilver": 40,
+                       "dteambronze": 60,
+                       "infngridlow": 110,
+                       "infngridmedium": 120,
+                       "infngridhigh": 130}
+            
+            workspace = Workspace(vomap = vomap)
+            workspace.setMaxJobCmd(mjTable)
+            
+            cfgfile = workspace.getConfigurationFile()
+            config = DynSchedUtils.readConfigurationFromFile(cfgfile)
+            
+            result = DynSchedUtils.getMaxJobsTable(config)
+            self.assertTrue('atlas' in result and result['atlas'] == 50
+                            and 'dteam' in result and result['dteam'] == 150
+                            and 'infngrid' in result and result['infngrid'] == 360)
+                
+        except Exception, test_error:
+            self.fail(repr(test_error))
+        
+if __name__ == '__main__':
+    unittest.main()
 
