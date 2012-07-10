@@ -88,6 +88,28 @@ class AnalyzerTestCase(unittest.TestCase):
             self.fail(repr(test_error))
 
 
+    def test_analyze_err_from_script(self):
+        try:
+            workspace = Workspace(vomap = self.vomap)
+            script = """#!/usr/bin/python
+import sys
+sys.stderr.write("Dummy error message")
+sys.exit(1)
+"""
+            workspace.setLRMSCmd(script)
+            
+            cfgfile = workspace.getConfigurationFile()
+            config = DynSchedUtils.readConfigurationFromFile(cfgfile)
+            
+            collector = Analyzer.analyze(config, {})
+        
+            self.fail("Exception not handled")
+            
+        except Analyzer.AnalyzeException, test_error:
+            msg = str(test_error)
+            self.assertTrue(msg.startswith("Dummy error message"))
+        except Exception, test_error:
+            self.fail(repr(test_error))
 
 
 

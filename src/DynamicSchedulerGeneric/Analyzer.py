@@ -188,8 +188,6 @@ class ErrorHandler(Thread):
             self.message = self.message + line
             line = self.stream.readline()
         
-    def get_error(self):
-        return None
 
 
 def analyze(config, maxjobTable):
