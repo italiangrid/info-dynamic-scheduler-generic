@@ -68,7 +68,7 @@ def getMaxJobsTable(config):
         idx1 = stdoutdata.find("{")
         idx2 = stdoutdata.find("}")
         if idx1 < 0 or idx2 < 0 or idx2 < idx1:
-            raise Exception('Malformed output for %s' % raw_command)
+            raise UtilsException('Malformed output for %s' % raw_command)
         dictString = stdoutdata[idx1:idx2+1]
         grpDict = eval(dictString, {"__builtins__" : {}})
         

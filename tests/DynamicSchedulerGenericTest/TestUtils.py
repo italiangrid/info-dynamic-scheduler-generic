@@ -96,6 +96,14 @@ printf 'mydict = {
         os.chmod(self.workspace +"/maxjobs-mock",
                  stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
     
+    def setLRMSCmd(self, lrms_script):
+        lrmscmdFile = open(self.workspace +"/lrmsinfo-mock", "w")
+        lrmscmdFile.write(lrms_script)
+        lrmscmdFile.close
+        
+        os.chmod(self.workspace +"/lrmsinfo-mock",
+                 stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+    
     def setGLUE1StaticFile(self, ldif):
         pass
     
