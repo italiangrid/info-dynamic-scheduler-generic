@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and 
 # limitations under the License.
 
+import sys
 import re
 import shlex
 import subprocess
@@ -32,18 +33,16 @@ class DataCollector:
         self.config = config
         self.mjTable = mjTable
         
-        self.active = 0
-        self.free = 0
-        self.now = 0
-        self.cycle = 0
+        self.active = -1
+        self.free = -1
+        self.now = -1
+        self.cycle = -1
         
         self.njStateVO = {}
         self.njQueueState = {}
         self.njQueueStateVO = {}
         
-        self.ettVO = {}
         self.ettQueue = {}
-        self.ettQueueVO = {}
         
     def register(self, evndict):
         pass
@@ -85,18 +84,7 @@ class DataCollector:
             self.njQueueStateVO[key3] = 1
             
         self.register(tmpdict)
-
-    def setAttribute(self, key, value):
-        if key == 'nactive':
-            self.active = int(value)
-        if key == 'nfree':
-            self.free = int(value)
-        if key == 'now':
-            self.now = int(value)
-        if key == 'schedcycle':
-            self.cycle = int(value)
         
-
 
 
 
@@ -110,28 +98,40 @@ class WaitTimeEstimator(DataCollector):
 
     def __init__(self, config, mjTable):
         DataCollector.__init__(self, config, mjTable)
-        
+        self.min_rtime = -1
 
     def register(self, evndict):
+    
+        key1 = evndict['queue']
+        
+        if self.free > 0:
+            if not key1 in self.ettQueue:
+                self.ettQueue[key1] = self._adjusted_ett(0)
+            return
+
         if evndict['state'] == 'queued' and 'qtime' in evndict:
             
-            tmpt = self.now - evndict['qtime']
+            tmpt = self._adjusted_ett(self.now - evndict['qtime'])
             
-            key1 = evndict['group']
-            if not key1 in self.ettVO or self.ettVO[key1] < tmpt:
-                self.ettVO[key1] = tmpt
-
-            key2 = evndict['queue']
-            if not key2 in self.ettQueue or self.ettQueue[key2] < tmpt:
-                self.ettQueue[key2] = tmpt
+            if not key1 in self.ettQueue or self.ettQueue[key1] < tmpt:
+                self.ettQueue[key1] = tmpt
                 
-            key3 = (evndict['queue'], evndict['group'])
-            if not key3 in self.ettQueueVO or self.ettQueueVO[key3] < tmpt:
-                self.ettQueueVO[key3] = tmpt
-
+        if evndict['state'] == 'running' and 'start' in evndict:
+            if evndict['start'] > self.min_rtime:
+                self.min_rtime = evndict['start']
     
     def estimate_ett(self):
         pass
+
+    def _adjusted_ett(self, rawval):
+        if rawval < self.cycle:
+            return int(self.cycle / 2.)
+        else:
+            return int(rawval)
+
+
+
+
 
 
 
@@ -145,34 +145,52 @@ class DataHandler(Thread):
         self.collector = collector
         self.evn_re = re.compile("^\s*(\{[^}]+\})\s*$")
         self.prop_re = re.compile("^\s*(\w+)\s+(\d+)\s*$")
-        
+        self.internerr = None
         
     def run(self):
     
-        line = self.stream.readline();
-        while line:
-            ematch = self.evn_re.match(line)
-            if ematch:
-                try:
-                    self.collector.load(ematch.group(1))
-                except AnalyzeException, collect_error:
-                    #
-                    # TODO report errors and goon
-                    #
-                    pass
-            
-            pmatch = self.prop_re.match(line)
-            if pmatch:
-                key = pmatch.group(1).lower()
-                value = pmatch.group(2)
-                self.collector.setAttribute(key, value)
-            
+        try:
+            tmpc = 0
             line = self.stream.readline();
+            while line:
         
-        self.collector.estimate_ett()
+                pmatch = self.prop_re.match(line)
+                if pmatch:
+                    key = pmatch.group(1).lower()
+                    value = pmatch.group(2)
+                    if key == 'nactive':
+                        self.collector.active = int(value)
+                        tmpc |= 1
+                    elif key == 'nfree':
+                        self.collector.free = int(value)
+                        tmpc |= 2
+                    elif key == 'now':
+                        self.collector.now = int(value)
+                        tmpc |= 4
+                    elif key == 'schedcycle':
+                        self.collector.cycle = int(value)
+                        tmpc |= 8
 
+                ematch = self.evn_re.match(line)
+                if ematch:
+                
+                    if tmpc < 15:
+                        raise Exception("Missing attributes before job table")
+                        
+                    try:
+                        self.collector.load(ematch.group(1))
+                    except AnalyzeException, collect_error:
+                        #
+                        # TODO report errors and goon
+                        #
+                        pass
 
+                line = self.stream.readline();
+        
+            self.collector.estimate_ett()
 
+        except:
+            self.internerr = str(sys.exc_info()[0])
 
 
 class ErrorHandler(Thread):
@@ -213,6 +231,9 @@ def analyze(config, maxjobTable):
     
     if ret_code > 0:
         raise AnalyzeException(stderr_thread.message)
+        
+    if stdout_thread.internerr:
+        raise AnalyzeException(stdout_thread.internerr)
     
     return collector
 
