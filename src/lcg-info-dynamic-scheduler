@@ -53,9 +53,9 @@ def main():
 
     cfgfile = None
 
-    for o, a in opts:
-        if o in ("-c", "--config"):
-            cfgfile = a
+    for opt_name, opt_arg in opts:
+        if opt_name in ("-c", "--config"):
+            cfgfile = opt_arg
         
     if not cfgfile:
         usage()
@@ -78,15 +78,14 @@ def main():
             abort_without_output("Wrong argument outputformat: " + tmps)
     
 
-    vomap = config.get('Main','vomap')
     mjobTable = DynSchedUtils.getMaxJobsTable(config)
-    data = Analyzer.analyze(config, mjobTable)
+    collector = Analyzer.analyze(config, mjobTable)
 
     if outputformat & GLUE1FORMAT:
-        GLUE1Handler.process(config)
+        GLUE1Handler.process(config, collector)
     
     if outputformat & GLUE2FORMAT:
-        GLUE2Handler.process(config)
+        GLUE2Handler.process(config, collector)
 
 if __name__ == "__main__":
     main()
