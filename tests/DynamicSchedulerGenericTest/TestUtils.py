@@ -105,10 +105,14 @@ printf 'mydict = {
                  stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
     
     def setGLUE1StaticFile(self, ldif):
-        pass
+        ldifFile = open(self.workspace +"/static-file-CE.ldif", "w")
+        ldifFile.write(ldif)
+        ldifFile.close()
     
     def setGLUE2StaticFile(self, ldif):
-        pass
+        ldifFile = open(self.workspace +"/ComputingShare.ldif", "w")
+        ldifFile.write(ldif)
+        ldifFile.close()
     
 
 if __name__ == '__main__':

@@ -14,5 +14,222 @@
 # See the License for the specific language governing permissions and 
 # limitations under the License.
 
-def process(config):
-    pass
+import sys
+import re
+
+class GLUE1Exception(Exception):
+    
+    def __init__(self, msg):
+        Exception.__init__(self, msg)
+
+
+ce_regex = re.compile("dn:\s*GlueCEUniqueID\s*=\s*[^$]+")
+vo_regex = re.compile("dn:\s*GlueVOViewLocalID\s*=\s*[^$]+")
+attr_regex = re.compile("(Glue\w+)\s*:\s*([^$]+)")
+    
+
+class GlueCEContainer:
+
+    def __init__(self):
+        self.id = None
+        self.queue = None
+        self.acbrs = set()
+        
+    def load(self, line):
+    
+        tmpm = attr_regex.match(line)
+        if tmpm == None:
+            return
+            
+        key = tmpm.group(1)
+        value = tmpm.group(2)
+            
+        if key == "GlueCEName":
+            
+            self.queue = value
+                
+        elif key == 'GlueCEUniqueID':
+            
+            self.id = value
+                
+        elif key == "GlueCEAccessControlBaseRule":
+            
+            if value.startswith("VO:") or value.startswith("VOMS:"):
+                voname = value.split(':')[1]
+                if len(voname) == 0:
+                    raise GLUE1Exception("Empty VO name in acbr")
+                self.acbrs.add(voname)
+
+
+        
+    def close(self):
+        if not self.queue:
+            raise GLUE1Exception("Missing mandatory attribute GlueCEName")
+        if not self.id:
+            raise GLUE1Exception("Missing mandatory attribute GlueCEUniqueID")
+        
+
+class GlueVOViewContainer:
+
+    def __init__(self):
+        self.id = None
+        self.fkey = None
+        
+    def load(self, line):
+        tmpm = attr_regex.match(line)
+        if tmpm == None:
+            return
+            
+        key = tmpm.group(1)
+        value = tmpm.group(2)
+        
+        if key == "GlueVOViewLocalID":
+            
+            #
+            # TODO verify this is the name of the VO  (see ACBR)
+            #
+            self.id = value
+            
+        elif key == "GlueChunkKey":
+        
+            tmpl = value.split('=')
+            if len(tmpl)<2:
+                raise GLUE1Exception("Wrong format for GlueChunkKey")
+            label = tmpl[0].strip()
+            tmpk = tmpl[1].strip()
+            if label == "GlueCEUniqueID" and len(tmpk) > 0:
+                self.fkey = tmpk
+
+    def close(self):
+        if self.fkey == None:
+            raise GLUE1Exception("Missing foreing key for GlueCEUniqueID")
+
+
+
+
+def process(config, collector, out=sys.stdout):
+
+    if not config.has_option('Main','static_ldif_file'):
+        raise GLUE1Exception("Missing static_ldif_file in configuration")
+    
+    ce_fkeys = {}
+
+    #
+    # Scanning static file for GlueCEUniqueID
+    #
+    gluece = None
+    static_file = None
+
+    try:
+    
+        static_file = open(config.get('Main','static_ldif_file'),'r')
+    
+        goon = True
+        while goon:
+        
+            tmps = static_file.readline()
+            if tmps == '':
+                goon = False
+            line = tmps.strip()
+        
+            if len(line) == 0:
+            
+                if gluece <> None:
+            
+                    gluece.close()
+                    
+                    ce_fkeys[gluece.id] = gluece.queue
+                
+                    key1 = (gluece.queue, 'queued')
+                    if key1 in collector.njQueueState:
+                        nwait = collector.njQueueState[key1]
+                    else:
+                        nwait = 0
+                        
+                    key2 = (gluece.queue, 'running')
+                    if key2 in collector.njQueueState:
+                        nrun = collector.njQueueState[key2]
+                    else:
+                        nrun = 0
+                
+                    out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
+                    out.write("GlueCEStateRunningJobs: %d\n" % nrun)
+                    out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
+                    out.write("\n");
+                
+                gluece = None
+            
+            elif ce_regex.match(line):
+        
+                gluece = GlueCEContainer()
+                out.write(line + '\n')
+            
+            elif gluece <> None:
+                gluece.load(line)
+                    
+    finally:
+        if static_file:
+            static_file.close()
+    
+    #
+    # Scanning static file for GlueVOViewLocalID
+    #
+    gluevoview = None
+    static_file = None
+    
+    try:
+    
+        static_file = open(config.get('Main','static_ldif_file'),'r')
+    
+        goon = True
+        while goon:
+        
+            tmps = static_file.readline()
+            if tmps == '':
+                goon = False
+            line = tmps.strip()
+        
+            if len(line) == 0:
+            
+                if gluevoview <> None:
+            
+                    gluevoview.close()
+                    
+                    if not gluevoview.fkey in ce_fkeys:
+                        raise GLUE1Exception("Invalid foreing key for " + gluevoview.id)
+                    queue = ce_fkeys[gluevoview.fkey]
+                    
+                    key1 = (queue, 'queued', gluevoview.id)
+                    if key1 in collector.njQueueStateVO:
+                        nwait = collector.njQueueStateVO[key1]
+                    else:
+                        nwait = 0
+                    
+                    key2 = (queue, 'running', gluevoview.id)
+                    if key2 in collector.njQueueStateVO:
+                        nrun = collector.njQueueStateVO[key2]
+                    else:
+                        nrun = 0
+                        
+                    out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
+                    out.write("GlueCEStateRunningJobs: %d\n" % nrun)
+                    out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
+                    out.write("\n");
+                    
+                gluevoview = None
+            
+            elif vo_regex.match(line):
+        
+                gluevoview = GlueVOViewContainer()
+                out.write(line + '\n')
+            
+            elif gluevoview <> None:
+                gluevoview.load(line)
+                    
+    finally:
+        if static_file:
+            static_file.close()
+    
+    
+    
+    
