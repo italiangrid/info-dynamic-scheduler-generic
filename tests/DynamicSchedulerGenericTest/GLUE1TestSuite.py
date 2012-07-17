@@ -62,31 +62,29 @@ class GLUE1TestCase(unittest.TestCase):
         
         self.dictfmt = '{"group": "%s", "queue": "%s", "state": "%s", "qtime": %d}\n'
         
-    
+
+    def _script(self):
+        jTable = [
+                  ("dteamgold", 'creamtest2', 'running', 1327566866),
+                  ("dteamgold", 'creamtest2', 'queued', 1327568866),
+                  ("dteambronze", "creamtest2", 'queued', 1327571866),
+                  ("dteamgold", "creamtest1", 'running', 1327567866),
+                  ("dteamsilver", "creamtest1", 'running', 1327569866),
+                  ("dteambronze", "creamtest1", 'queued', 1327570866),
+                  ("infngridlow", "creamtest1", 'queued', 1327572866),
+                  ("infngridmedium", "creamtest1", 'running', 1327573866)
+                 ]
+        script = self.headerfmt % (5, 0, 1327574866, 26)
+        for jItem in jTable:
+            script += self.dictfmt % jItem            
+        script += self.footerfmt
+        return script
+
+
     def test_process_ok(self):
         try:
-            
-            jTable = [
-                      ("dteamgold", 'creamtest2', 'running', 1327566866),
-                      ("dteamgold", 'creamtest2', 'queued', 1327568866),
-                      ("dteambronze", "creamtest2", 'queued', 1327571866),
-                      ("dteamgold", "creamtest1", 'running', 1327567866),
-                      ("dteamsilver", "creamtest1", 'running', 1327569866),
-                      ("dteambronze", "creamtest1", 'queued', 1327570866),
-                      ("infngridlow", "creamtest1", 'queued', 1327572866),
-                      ("infngridmedium", "creamtest1", 'running', 1327573866)
-                     ]
-            workspace = Workspace(vomap = self.vomap)
-            
-            script = self.headerfmt % (5, 0, 1327574866, 26)
-            for jItem in jTable:
-                script += self.dictfmt % jItem            
-            script += self.footerfmt
-            
-            workspace.setLRMSCmd(script)
-            
             glueceuniqueid = 'GlueCEUniqueID=cream-38.pd.infn.it:8443/cream-pbs-creamtest1,mds-vo-name=resource,o=grid'
-            gluevoviewid = 'GlueVOViewLocalID=dteam,GlueCEUniqueID=cream-38.pd.infn.it:8443/cream-pbs-creamtest1,mds-vo-name=resource,o=grid'
+            gluevoviewid = 'GlueVOViewLocalID=dteam,' + glueceuniqueid
             ldif = """
 dn: %s
 GlueVOViewLocalID: dteam
@@ -99,6 +97,9 @@ GlueCEName: creamtest1
 GlueCEAccessControlBaseRule: VO:infngrid
 GlueCEAccessControlBaseRule: VO:dteam
 """ % (gluevoviewid, glueceuniqueid)
+
+            workspace = Workspace(vomap = self.vomap)            
+            workspace.setLRMSCmd(self._script())
             workspace.setGLUE1StaticFile(ldif)
             
             cfgfile = workspace.getConfigurationFile()
@@ -118,8 +119,43 @@ GlueCEAccessControlBaseRule: VO:dteam
             etype, value, traceback = sys.exc_info()
             sys.excepthook(etype, value, traceback)
             self.fail(repr(test_error))
+            
 
 
+
+    def test_process_missingce(self):
+        try:
+            glueceuniqueid = 'GlueCEUniqueID=cream-38.pd.infn.it:8443/cream-pbs-creamtest1,mds-vo-name=resource,o=grid'
+            gluevoviewid = 'GlueVOViewLocalID=dteam,' + glueceuniqueid
+            ldif = """
+dn: %s
+GlueVOViewLocalID: dteam
+GlueChunkKey: GlueCEUniqueID=cream-38.pd.infn.it:8443/cream-pbs-creamtest1
+GlueCEAccessControlBaseRule: VO:dteam
+""" % gluevoviewid
+            
+            workspace = Workspace(vomap = self.vomap)
+            workspace.setLRMSCmd(self._script())
+            workspace.setGLUE1StaticFile(ldif)
+            
+            cfgfile = workspace.getConfigurationFile()
+            config = DynSchedUtils.readConfigurationFromFile(cfgfile)
+            
+            dOut = DummyOutput()
+            collector = Analyzer.analyze(config, {})
+            GLUE1Handler.process(config, collector, dOut)            
+            self.fail("No exception detected")
+        
+        except GLUE1Handler.GLUE1Exception, glue_error:
+            msg = str(glue_error)
+            self.assertTrue(msg.startswith("Invalid foreign key"))      
+        except Exception, test_error:
+            etype, value, traceback = sys.exc_info()
+            sys.excepthook(etype, value, traceback)
+            self.fail(repr(test_error))
+        
+
+    
 if __name__ == '__main__':
     unittest.main()
 

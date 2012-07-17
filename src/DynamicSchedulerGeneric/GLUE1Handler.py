@@ -196,7 +196,7 @@ def process(config, collector, out=sys.stdout):
                     gluevoview.close()
                     
                     if not gluevoview.fkey in ce_fkeys:
-                        raise GLUE1Exception("Invalid foreing key for " + gluevoview.id)
+                        raise GLUE1Exception("Invalid foreign key for " + gluevoview.id)
                     queue = ce_fkeys[gluevoview.fkey]
                     
                     key1 = (queue, 'queued', gluevoview.id)
