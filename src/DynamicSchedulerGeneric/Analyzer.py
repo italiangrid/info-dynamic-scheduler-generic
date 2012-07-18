@@ -42,13 +42,17 @@ class DataCollector:
         self.njQueueState = {}
         self.njQueueStateVO = {}
         
-        self.ettQueue = {}
+        self.ert = {}
+        self.wrt = {}
         
     def register(self, evndict):
         pass
     
-    def estimate_ett(self):
+    def estimate(self):
         pass
+        
+    def freeSlots(self, queue, vo):
+        return -1;
 
     def load(self, event):
         tmpdict = eval(event, {"__builtins__" : {}})
@@ -105,22 +109,22 @@ class WaitTimeEstimator(DataCollector):
         key1 = evndict['queue']
         
         if self.free > 0:
-            if not key1 in self.ettQueue:
-                self.ettQueue[key1] = self._adjusted_ett(0)
+            if not key1 in self.ert:
+                self.ert[key1] = self._adjusted_ett(0)
             return
 
         if evndict['state'] == 'queued' and 'qtime' in evndict:
             
             tmpt = self._adjusted_ett(self.now - evndict['qtime'])
             
-            if not key1 in self.ettQueue or self.ettQueue[key1] < tmpt:
-                self.ettQueue[key1] = tmpt
+            if not key1 in self.ert or self.ert[key1] < tmpt:
+                self.ert[key1] = tmpt
                 
         if evndict['state'] == 'running' and 'start' in evndict:
             if evndict['start'] > self.min_rtime:
                 self.min_rtime = evndict['start']
     
-    def estimate_ett(self):
+    def estimate(self):
         pass
 
     def _adjusted_ett(self, rawval):
@@ -187,7 +191,7 @@ class DataHandler(Thread):
 
                 line = self.stream.readline();
         
-            self.collector.estimate_ett()
+            self.collector.estimate()
 
         except:
             self.internerr = str(sys.exc_info()[0])

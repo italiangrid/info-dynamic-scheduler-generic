@@ -151,14 +151,15 @@ def process(config, collector, out=sys.stdout):
                     share_id = policy.fkey
                     if not share_id in share_fkeys:
                         raise GLUE2Exception("Invalid foreign key for " + share_id)
+                    mqueue = share_fkeys[share_id].mqueue
                     
-                    key1 = (share_fkeys[share_id].mqueue, 'queued', policy.vo)
+                    key1 = (mqueue, 'queued', policy.vo)
                     if key1 in collector.njQueueStateVO:
                         nwait = collector.njQueueStateVO[key1]
                     else:
                         nwait = 0
                     
-                    key2 = (share_fkeys[share_id].mqueue, 'running', policy.vo)
+                    key2 = (mqueue, 'running', policy.vo)
                     if key2 in collector.njQueueStateVO:
                         nrun = collector.njQueueStateVO[key2]
                     else:
@@ -168,6 +169,17 @@ def process(config, collector, out=sys.stdout):
                     out.write("GLUE2ComputingShareRunningJobs: %d\n" % nrun)
                     out.write("GLUE2ComputingShareWaitingJobs: %d\n" % nwait)
                     out.write("GLUE2ComputingShareTotalJobs: %d\n" % (nrun + nwait))
+                    
+                    if mqueue in collector.ert:
+                        out.write("GLUE2ComputingShareEstimatedAverageWaitingTime: %d\n" 
+                                  % collector.ert[mqueue])
+                    if mqueue in collector.wrt:
+                        out.write("GLUE2ComputingShareEstimatedWorstWaitingTime: %d\n" 
+                                  % collector.wrt[mqueue])
+                    
+                    nfreeSlots = collector.freeSlots(mqueue, policy.vo)
+                    if nfreeSlots >= 0:
+                        out.write("GLUE2ComputingShareFreeSlots: %d" % nfreeSlots)
                     out.write("\n")
                     
                 policy = None

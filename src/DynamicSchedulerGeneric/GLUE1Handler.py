@@ -214,6 +214,18 @@ def process(config, collector, out=sys.stdout):
                     out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
                     out.write("GlueCEStateRunningJobs: %d\n" % nrun)
                     out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
+
+                    if queue in collector.ert:
+                        out.write("GlueCEStateEstimatedResponseTime: %d\n" 
+                                  % collector.ert[queue])
+                    if queue in collector.wrt:
+                        out.write("GlueCEStateWorstResponseTime: %d\n" 
+                                  % collector.wrt[queue])
+                    
+                    nfreeSlots = collector.freeSlots(queue, gluevoview.id)
+                    if nfreeSlots >= 0:
+                        out.write("GlueCEStateFreeJobSlots: %d" % nfreeSlots)
+
                     out.write("\n");
                     
                 gluevoview = None
