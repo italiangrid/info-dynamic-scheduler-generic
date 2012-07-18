@@ -150,7 +150,7 @@ def process(config, collector, out=sys.stdout):
                     
                     share_id = policy.fkey
                     if not share_id in share_fkeys:
-                        raise GLUE2Exception("Invalid foreing key for " + share_id)
+                        raise GLUE2Exception("Invalid foreign key for " + share_id)
                     
                     key1 = (share_fkeys[share_id].mqueue, 'queued', policy.vo)
                     if key1 in collector.njQueueStateVO:
