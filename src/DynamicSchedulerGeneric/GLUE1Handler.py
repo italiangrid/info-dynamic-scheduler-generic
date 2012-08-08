@@ -140,17 +140,9 @@ def process(config, collector, out=sys.stdout):
                     
                     ce_fkeys[gluece.id] = gluece.queue
                 
-                    key1 = (gluece.queue, 'queued')
-                    if key1 in collector.njQueueState:
-                        nwait = collector.njQueueState[key1]
-                    else:
-                        nwait = 0
+                    nwait = collector.queuedCREAMJobsOnQueue(gluece.queue)
                         
-                    key2 = (gluece.queue, 'running')
-                    if key2 in collector.njQueueState:
-                        nrun = collector.njQueueState[key2]
-                    else:
-                        nrun = 0
+                    nrun = collector.runningCREAMJobsOnQueue(gluece.queue)
                 
                     out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
                     out.write("GlueCEStateRunningJobs: %d\n" % nrun)
@@ -199,18 +191,10 @@ def process(config, collector, out=sys.stdout):
                         raise GLUE1Exception("Invalid foreign key for " + gluevoview.id)
                     queue = ce_fkeys[gluevoview.fkey]
                     
-                    key1 = (queue, 'queued', gluevoview.id)
-                    if key1 in collector.njQueueStateVO:
-                        nwait = collector.njQueueStateVO[key1]
-                    else:
-                        nwait = 0
+                    nwait = collector.queuedCREAMJobsOnQueueForVO(queue, gluevoview.id)
+
+                    nrun = collector.runningCREAMJobsOnQueueForVO(queue, gluevoview.id)
                     
-                    key2 = (queue, 'running', gluevoview.id)
-                    if key2 in collector.njQueueStateVO:
-                        nrun = collector.njQueueStateVO[key2]
-                    else:
-                        nrun = 0
-                        
                     out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
                     out.write("GlueCEStateRunningJobs: %d\n" % nrun)
                     out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))

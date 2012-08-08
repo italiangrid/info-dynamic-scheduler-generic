@@ -56,7 +56,11 @@ class Workspace:
             if not "noglue2static" in args or args["noglue2static"] <> "true":
                 config.set("Main", "static_glue2_ldif_file_computingshare", 
                            self.workspace +"/ComputingShare.ldif")
-        
+            
+            config.set("Main", "cream_prefix", "creXX_")
+            if "enableES" in args and args["enableES"] == "true":
+                config.set("Main", "es_prefix", "esXX_")
+            
             if not "nomaxjobcmd" in args or args["nomaxjobcmd"] <> "true":
                 config.set("Scheduler", "vo_max_jobs_cmd", self.workspace +"/maxjobs-mock")
             if not "nolrmscmd" in args or args["nolrmscmd"] <> "true":

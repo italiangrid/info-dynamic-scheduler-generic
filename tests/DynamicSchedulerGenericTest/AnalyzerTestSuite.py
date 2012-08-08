@@ -41,7 +41,7 @@ class AnalyzerTestCase(unittest.TestCase):
         
         self.footerfmt = "'\n\nexit 0"
         
-        self.dictfmt = '{"group": "%s", "queue": "%s", "state": "%s", "qtime": %d}\n'
+        self.dictfmt = '{"group": "%s", "queue": "%s", "state": "%s", "qtime": %d, "name": "%s"}\n'
 
     def tearDown(self):
         pass
@@ -50,16 +50,16 @@ class AnalyzerTestCase(unittest.TestCase):
         try:
         
             jTable = [
-                      ("atlasprod", "creamtest1", 'running', 1327564866),
-                      ("atlasprod", 'creamtest2', 'queued', 1327565866),
-                      ("dteamgold", 'creamtest2', 'running', 1327566866),
-                      ("dteamgold", "creamtest1", 'running', 1327567866),
-                      ("dteamgold", 'creamtest2', 'queued', 1327568866),
-                      ("infngridlow", 'creamtest1', 'running', 1327569866),
-                      ("infngridlow", 'creamtest2', 'running', 1327570866),
-                      ("infngridhigh", 'creamtest1', 'running', 1327571866),
-                      ("infngridhigh", 'creamtest2', 'running', 1327572866),
-                      ("infngridhigh", 'creamtest1', 'queued', 1327573866)
+                      ("atlasprod", "creamtest1", 'running', 1327564866, "creXX_23081970"),
+                      ("atlasprod", 'creamtest2', 'queued', 1327565866, "creXX_23081971"),
+                      ("dteamgold", 'creamtest2', 'running', 1327566866, "creXX_23081972"),
+                      ("dteamgold", "creamtest1", 'running', 1327567866, "creXX_23081973"),
+                      ("dteamgold", 'creamtest2', 'queued', 1327568866, "creXX_23081974"),
+                      ("infngridlow", 'creamtest1', 'running', 1327569866, "creXX_23081975"),
+                      ("infngridlow", 'creamtest2', 'running', 1327570866, "creXX_23081976"),
+                      ("infngridhigh", 'creamtest1', 'running', 1327571866, "creXX_23081977"),
+                      ("infngridhigh", 'creamtest2', 'running', 1327572866, "creXX_23081978"),
+                      ("infngridhigh", 'creamtest1', 'queued', 1327573866, "creXX_23081979")
                      ]
             workspace = Workspace(vomap = self.vomap)
             
@@ -75,17 +75,17 @@ class AnalyzerTestCase(unittest.TestCase):
             
             collector = Analyzer.analyze(config, {})
             
-            result =            collector.njStateVO[('running', 'atlas')] == 1
-            result = result and collector.njStateVO[('queued', 'atlas')] == 1
-            result = result and collector.njStateVO[('running', 'dteam')] == 2
-            result = result and collector.njStateVO[('queued', 'dteam')] == 1
-            result = result and collector.njStateVO[('running', 'infngrid')] == 4
-            result = result and collector.njStateVO[('queued', 'infngrid')] == 1
+            result =            collector.runningCREAMJobsForVO('atlas') == 1
+            result = result and collector.queuedCREAMJobsForVO('atlas') == 1
+            result = result and collector.runningCREAMJobsForVO('dteam') == 2
+            result = result and collector.queuedCREAMJobsForVO('dteam') == 1
+            result = result and collector.runningCREAMJobsForVO('infngrid') == 4
+            result = result and collector.queuedCREAMJobsForVO('infngrid') == 1
             
             self.assertTrue(result)
             
         except Exception, test_error:
-            self.fail(repr(test_error))
+            self.fail(str(test_error))
 
 
     def test_analyze_err_from_script(self):
@@ -112,6 +112,38 @@ sys.exit(1)
             self.fail(repr(test_error))
 
 
+    def test_analyze_cream_and_es(self):
+        try:
+            jTable = [
+                      ("atlasprod", "creamtest1", 'running', 1327564866, "creXX_23081970"),
+                      ("atlasprod", 'creamtest2', 'queued', 1327565866, "creXX_23081971"),
+                      ("atlasprod", "creamtest1", 'running', 1327564866, "esXX_23081970"),
+                      ("atlasprod", 'creamtest2', 'queued', 1327565866, "esXX_23081971"),
+                      ("atlasprod", 'creamtest2', 'queued', 1327565866, "esXX_23081972")
+                     ]
+            workspace = Workspace(vomap = self.vomap, enableES = 'true')
+            
+            script = self.headerfmt % (5, 0, 1327574866, 26)
+            for jItem in jTable:
+                script += self.dictfmt % jItem            
+            script += self.footerfmt
+            
+            workspace.setLRMSCmd(script)
+            
+            cfgfile = workspace.getConfigurationFile()
+            config = DynSchedUtils.readConfigurationFromFile(cfgfile)
+            
+            collector = Analyzer.analyze(config, {})
+            
+            result =            collector.runningCREAMJobsForVO('atlas') == 1
+            result = result and collector.queuedCREAMJobsForVO('atlas') == 1
+            result = result and collector.runningESJobsForVO('atlas') == 1
+            result = result and collector.queuedESJobsForVO('atlas') == 2
+            self.assertTrue(result)
+            
+        except Exception, test_error:
+            self.fail(str(test_error))
+            
 
 if __name__ == '__main__':
     unittest.main()

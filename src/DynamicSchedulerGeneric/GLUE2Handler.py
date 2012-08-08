@@ -153,17 +153,8 @@ def process(config, collector, out=sys.stdout):
                         raise GLUE2Exception("Invalid foreign key for " + share_id)
                     mqueue = share_fkeys[share_id].mqueue
                     
-                    key1 = (mqueue, 'queued', policy.vo)
-                    if key1 in collector.njQueueStateVO:
-                        nwait = collector.njQueueStateVO[key1]
-                    else:
-                        nwait = 0
-                    
-                    key2 = (mqueue, 'running', policy.vo)
-                    if key2 in collector.njQueueStateVO:
-                        nrun = collector.njQueueStateVO[key2]
-                    else:
-                        nrun = 0
+                    nwait = collector.queuedCREAMJobsOnQueueForVO(mqueue, policy.vo)
+                    nrun = collector.runningCREAMJobsOnQueueForVO(mqueue, policy.vo)
                     
                     out.write("dn: %s\n" % share_fkeys[share_id].dn)
                     out.write("GLUE2ComputingShareRunningJobs: %d\n" % nrun)

@@ -60,19 +60,19 @@ class GLUE1TestCase(unittest.TestCase):
         
         self.footerfmt = "'\n\nexit 0"
         
-        self.dictfmt = '{"group": "%s", "queue": "%s", "state": "%s", "qtime": %d}\n'
+        self.dictfmt = '{"group": "%s", "queue": "%s", "state": "%s", "qtime": %d, "name": "%s"}\n'
         
 
     def _script(self):
         jTable = [
-                  ("dteamgold", 'creamtest2', 'running', 1327566866),
-                  ("dteamgold", 'creamtest2', 'queued', 1327568866),
-                  ("dteambronze", "creamtest2", 'queued', 1327571866),
-                  ("dteamgold", "creamtest1", 'running', 1327567866),
-                  ("dteamsilver", "creamtest1", 'running', 1327569866),
-                  ("dteambronze", "creamtest1", 'queued', 1327570866),
-                  ("infngridlow", "creamtest1", 'queued', 1327572866),
-                  ("infngridmedium", "creamtest1", 'running', 1327573866)
+                  ("dteamgold", 'creamtest2', 'running', 1327566866, "creXX_23081970"),
+                  ("dteamgold", 'creamtest2', 'queued', 1327568866, "creXX_23081971"),
+                  ("dteambronze", "creamtest2", 'queued', 1327571866, "creXX_23081972"),
+                  ("dteamgold", "creamtest1", 'running', 1327567866, "creXX_23081973"),
+                  ("dteamsilver", "creamtest1", 'running', 1327569866, "creXX_23081974"),
+                  ("dteambronze", "creamtest1", 'queued', 1327570866, "creXX_23081975"),
+                  ("infngridlow", "creamtest1", 'queued', 1327572866, "creXX_23081976"),
+                  ("infngridmedium", "creamtest1", 'running', 1327573866, "creXX_23081977")
                  ]
         script = self.headerfmt % (5, 0, 1327574866, 26)
         for jItem in jTable:

@@ -28,10 +28,20 @@ class AnalyzeException(Exception):
 
 class DataCollector:
 
+    CREAMTYPE = 0
+    ESTYPE = 1
+    EXTRATYPE = 2
+
     def __init__(self, config, mjTable):
     
         self.config = config
         self.mjTable = mjTable
+        
+        self.creamPrefix = config.get('Main', 'cream_prefix')
+        if config.has_option('Main', 'es_prefix'):
+            self.esPrefix = config.get('Main', 'es_prefix')
+        else:
+            self.esPrefix = None
         
         self.active = -1
         self.free = -1
@@ -57,20 +67,25 @@ class DataCollector:
     def load(self, event):
         tmpdict = eval(event, {"__builtins__" : {}})
         
-        if not 'group' in tmpdict:
-            raise AnalyzeException("Missing group in " + event)
-        if not 'queue' in tmpdict:
-            raise AnalyzeException("Missing queue in " + event)
-        if not 'state' in tmpdict:
-            raise AnalyzeException("Missing state in " + event)
+        for label in ['group', 'queue', 'state', 'name']:
+            if not label in tmpdict:
+                raise AnalyzeException("Missing %s in %s" % (label, event))
+
+        if tmpdict['name'].startswith(self.creamPrefix):
+            srvId = DataCollector.CREAMTYPE
+        elif self.esPrefix <> None and tmpdict['name'].startswith(self.esPrefix):
+            srvId = DataCollector.ESTYPE
+        else:
+            #Unknown job
+            srvId = DataCollector.EXTRATYPE
         
         vomap = self.config.get('Main','vomap')
         if tmpdict['group'] in vomap:
             tmpdict['group'] = vomap[tmpdict['group']]
         
-        key1 = (tmpdict['state'], tmpdict['group'])
-        key2 = (tmpdict['queue'], tmpdict['state'])
-        key3 = (tmpdict['queue'], tmpdict['state'], tmpdict['group'])
+        key1 = (srvId, tmpdict['state'], tmpdict['group'])
+        key2 = (srvId, tmpdict['queue'], tmpdict['state'])
+        key3 = (srvId, tmpdict['queue'], tmpdict['state'], tmpdict['group'])
         
         if key1 in self.njStateVO:
             self.njStateVO[key1] += 1
@@ -90,12 +105,81 @@ class DataCollector:
         self.register(tmpdict)
         
 
+    def runningCREAMJobsForVO(self, voname):
+        key = (DataCollector.CREAMTYPE, 'running', voname)
+        if key in self.njStateVO:
+            return self.njStateVO[key]
+        return 0
+    
+    def runningCREAMJobsOnQueue(self, qname):
+        key = (DataCollector.CREAMTYPE, qname, 'running')
+        if key in self.njQueueState:
+            return self.njQueueState[key]
+        return 0
+
+    def runningCREAMJobsOnQueueForVO(self, qname, voname):
+        key = (DataCollector.CREAMTYPE, qname, 'running', voname)
+        if key in self.njQueueStateVO:
+            return self.njQueueStateVO[key]
+        return 0
+
+    def queuedCREAMJobsForVO(self, voname):
+        key = (DataCollector.CREAMTYPE, 'queued', voname)
+        if key in self.njStateVO:
+            return self.njStateVO[key]
+        return 0
+    
+    def queuedCREAMJobsOnQueue(self, qname):
+        key = (DataCollector.CREAMTYPE, qname, 'queued')
+        if key in self.njQueueState:
+            return self.njQueueState[key]
+        return 0
 
 
+    def queuedCREAMJobsOnQueueForVO(self, qname, voname):
+        key = (DataCollector.CREAMTYPE, qname, 'queued', voname)
+        if key in self.njQueueStateVO:
+            return self.njQueueStateVO[key]
+        return 0
+
+    
 
 
+    def runningESJobsForVO(self, voname):
+        key = (DataCollector.ESTYPE, 'running', voname)
+        if key in self.njStateVO:
+            return self.njStateVO[key]
+        return 0
+    
+    def runningESJobsOnQueue(self, qname):
+        key = (DataCollector.ESTYPE, qname, 'running')
+        if key in self.njQueueState:
+            return self.njQueueState[key]
+        return 0
 
+    def runningESJobsOnQueueForVO(self, qname, voname):
+        key = (DataCollector.ESTYPE, qname, 'running', voname)
+        if key in self.njQueueStateVO:
+            return self.njQueueStateVO[key]
+        return 0
 
+    def queuedESJobsForVO(self, voname):
+        key = (DataCollector.ESTYPE, 'queued', voname)
+        if key in self.njStateVO:
+            return self.njStateVO[key]
+        return 0
+    
+    def queuedESJobsOnQueue(self, qname):
+        key = (DataCollector.ESTYPE, qname, 'queued')
+        if key in self.njQueueState:
+            return self.njQueueState[key]
+        return 0
+
+    def queuedESJobsOnQueueForVO(self, qname, voname):
+        key = (DataCollector.ESTYPE, qname, 'queued', voname)
+        if key in self.njQueueStateVO:
+            return self.njQueueStateVO[key]
+        return 0
 
 
 class WaitTimeEstimator(DataCollector):
@@ -194,7 +278,9 @@ class DataHandler(Thread):
             self.collector.estimate()
 
         except:
-            self.internerr = str(sys.exc_info()[0])
+            etype, evalue, etraceback = sys.exc_info()
+            #sys.excepthook(etype, evalue, etraceback)
+            self.internerr = "%s: (%s)" % (etype, evalue)
 
 
 class ErrorHandler(Thread):
