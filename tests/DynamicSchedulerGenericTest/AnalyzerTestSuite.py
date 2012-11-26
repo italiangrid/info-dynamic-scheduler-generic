@@ -145,6 +145,40 @@ sys.exit(1)
             self.fail(str(test_error))
             
 
+    def test_analyze_with_maxjobforvo(self):
+        try:
+            jTable = [
+                      ("atlasprod", "creamtest1", 'running', 1327564866, "creXX_23081970"),
+                      ("dteamgold", 'creamtest2', 'running', 1327566866, "creXX_23081972"),
+                      ("dteamgold", "creamtest1", 'running', 1327567866, "creXX_23081973"),
+                      ("infngridlow", 'creamtest1', 'running', 1327569866, "creXX_23081975"),
+                      ("infngridlow", 'creamtest2', 'running', 1327570866, "creXX_23081976"),
+                      ("infngridhigh", 'creamtest2', 'running', 1327572866, "creXX_23081978")
+                     ]
+            workspace = Workspace(vomap = self.vomap)
+            
+            script = self.headerfmt % (10, 4, 1327574866, 26)
+            for jItem in jTable:
+                script += self.dictfmt % jItem            
+            script += self.footerfmt
+            
+            mJobTable = {'dteam': 5, 'atlas': 5, 'infngrid':5}
+            
+            workspace.setLRMSCmd(script)
+            workspace.setMaxJobCmd(mJobTable)
+            
+            cfgfile = workspace.getConfigurationFile()
+            config = DynSchedUtils.readConfigurationFromFile(cfgfile)
+            
+            collector = Analyzer.analyze(config, mJobTable)
+            
+            self.assertTrue(collector.freeSlots(None, 'dteam') == 3)
+
+        except Exception, test_error:
+            self.fail(str(test_error))
+
+
+
 if __name__ == '__main__':
     unittest.main()
 

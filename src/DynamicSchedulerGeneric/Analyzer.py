@@ -62,7 +62,18 @@ class DataCollector:
         pass
         
     def freeSlots(self, queue, vo):
-        return -1;
+        #Since the scheduler handles free slots and max free slots per VO
+        #without considering the queue, it is necessary to aggregate
+        #the value for all queues, so first parameter is ignored
+
+        if self.queuedCREAMJobsForVO(vo) > 0:
+            return 0
+        
+        if vo in self.mjTable:
+            availSlots = max(self.mjTable[vo]-self.runningCREAMJobsForVO(vo), 0)
+            return min(self.free, availSlots)
+            
+        return self.free
 
     def load(self, event):
         tmpdict = eval(event, {"__builtins__" : {}})

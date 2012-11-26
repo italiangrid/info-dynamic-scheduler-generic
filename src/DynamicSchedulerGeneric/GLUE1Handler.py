@@ -147,6 +147,16 @@ def process(config, collector, out=sys.stdout):
                     out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
                     out.write("GlueCEStateRunningJobs: %d\n" % nrun)
                     out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
+                    
+                    if gluece.queue in collector.ert:
+                        out.write("GlueCEStateEstimatedResponseTime: %d\n" 
+                                  % collector.ert[gluece.queue])
+                    if gluece.queue in collector.wrt:
+                        out.write("GlueCEStateWorstResponseTime: %d\n" 
+                                  % collector.wrt[gluece.queue])
+                    
+                    out.write("GlueCEStateFreeJobSlots: %d" % collector.free)
+                    
                     out.write("\n");
                 
                 gluece = None
