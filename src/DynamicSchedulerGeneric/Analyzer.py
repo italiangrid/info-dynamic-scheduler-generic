@@ -197,38 +197,52 @@ class WaitTimeEstimator(DataCollector):
 
     def __init__(self, config, mjTable):
         DataCollector.__init__(self, config, mjTable)
-        self.min_rtime = -1
 
     def register(self, evndict):
     
         key1 = evndict['queue']
         
+        #
+        # TODO missing free slots per queue
+        #
         if self.free > 0:
             if not key1 in self.ert:
-                self.ert[key1] = self._adjusted_ett(0)
+                self.ert[key1] = self.adjett(0)
+                self.wrt[key1] = self.adjwrt(0)
             return
 
-        if evndict['state'] == 'queued' and 'qtime' in evndict:
+        if evndict['state'] == 'running' and 'qtime' in evndict and 'start' in evndict:
+            tmpt = evndict['start'] - evndict['qtime']
             
-            tmpt = self._adjusted_ett(self.now - evndict['qtime'])
-            
-            if not key1 in self.ert or self.ert[key1] < tmpt:
+            if not key1 in self.ert:
                 self.ert[key1] = tmpt
+            else:
+                self.ert[key1] += tmpt
                 
-        if evndict['state'] == 'running' and 'start' in evndict:
-            if evndict['start'] > self.min_rtime:
-                self.min_rtime = evndict['start']
-    
+            if not key1 in self.wrt or self.wrt[key1] < tmpt:
+                self.wrt[key1] = tmpt
+            
+        
     def estimate(self):
-        pass
+        
+        for qKey in self.ert:
+            runningJobs = self.runningCREAMJobsOnQueue(qKey) + self.runningESJobsOnQueue(qKey)
+            self.ert[qKey] = self.adjett(self.ert[qKey] / runningJobs)
+            
+            self.wrt[qKey] = self.adjwrt(self.wrt[qKey])
 
-    def _adjusted_ett(self, rawval):
+
+    def adjett(self, rawval):
         if rawval < self.cycle:
             return int(self.cycle / 2.)
         else:
             return int(rawval)
 
-
+    def adjwrt(self, rawval):
+        if rawval < self.cycle:
+            return int(self.cycle)
+        else:
+            return int(rawval)
 
 
 
