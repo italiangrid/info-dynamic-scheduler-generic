@@ -1,1 +1,1 @@
-__all__ = ["Analyzer", "GLUE1Handler", "GLUE2Handler", "Utils"]
+__all__ = ["Analyzer", "GLUE1Handler", "GLUE2Handler", "PersistentEstimators", "Utils"]
