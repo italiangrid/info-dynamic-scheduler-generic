@@ -18,6 +18,7 @@ import sys
 import re
 import shlex
 import subprocess
+import logging
 from threading import Thread
 
 class AnalyzeException(Exception):
@@ -252,6 +253,8 @@ class WaitTimeEstimator(DataCollector):
 
 class DataHandler(Thread):
 
+    logger = logging.getLogger("Analyzer.DataHandler")
+
     def __init__(self, in_stream, collector):
         Thread.__init__(self)
         self.stream = in_stream
@@ -293,18 +296,14 @@ class DataHandler(Thread):
                     try:
                         self.collector.load(ematch.group(1))
                     except AnalyzeException, collect_error:
-                        #
-                        # TODO report errors and goon
-                        #
-                        pass
+                        logger.error("Cannot analyze: %s (%s)" %(ematch.group(1), str(collect_error)))
 
                 line = self.stream.readline();
         
             self.collector.estimate()
-
+            
         except:
             etype, evalue, etraceback = sys.exc_info()
-            #sys.excepthook(etype, evalue, etraceback)
             self.internerr = "%s: (%s)" % (etype, evalue)
 
 

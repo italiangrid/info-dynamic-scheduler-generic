@@ -22,6 +22,7 @@ import sys
 import os
 import getopt
 import string
+import logging
 
 from DynamicSchedulerGeneric import Analyzer
 from DynamicSchedulerGeneric import GLUE1Handler
@@ -36,20 +37,20 @@ BOTHFORMAT = 3
 def usage():
     print "Usage: lcg-info-dynamic-scheduler -c <cfg_file>"
 
-def abort_without_output(msg):
-    #
-    # TODO log error
-    #
-    sys.exit(2)
-
-
 def main():
+
+    #
+    # TODO hardcoded log conf file
+    #
+    logging.config.fileConfig("/etc/dynsched-generic/logging.conf")
+    logger = logging.getLogger("lcg-info-dynamic-scheduler.main")
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "c:", ["config="])
     except getopt.GetoptError:
+        logger.error("Error parsing command line")
         usage()
-        abort_without_output("Error parsing command line")
+        sys.exit(2)
 
     cfgfile = None
 
@@ -58,14 +59,16 @@ def main():
             cfgfile = opt_arg
         
     if not cfgfile:
+        logger.error("No config file specified")
         usage()
-        abort_without_output("No config file specified.")
+        sys.exit(2)
     
     config = None
     try:
         config = DynSchedUtils.readConfigurationFromFile(cfgfile)
     except Exception, config_error:
-        abort_without_output("While parsing config file %s: %s" % (cfgfile, repr(config_error)))
+        logger.error("While parsing config file %s: %s", cfgfile, repr(config_error))
+        sys.exit(2)
     
     outputformat = BOTHFORMAT
     if config.has_option('Main','outputformat'):
@@ -75,7 +78,8 @@ def main():
         elif tmps == "glue2":
             outputformat = GLUE2FORMAT
         elif tmps <> "both":
-            abort_without_output("Wrong argument outputformat: " + tmps)
+            logger.error("Wrong argument outputformat: %s", tmps)
+            sys.exit(2)
     
 
     mjobTable = DynSchedUtils.getMaxJobsTable(config)
