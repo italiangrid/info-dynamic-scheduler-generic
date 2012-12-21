@@ -21,17 +21,22 @@ import logging
 class BasicEstimator(DataCollector):
 
     logger = logging.getLogger("PersistentEstimators.BasicEstimator")
+    
+    DEFAULT_STORE_DIR = "/var/tmp/info-dynamic-scheduler-generic"
+    DEFAULT_SAMPLE_NUM = 5000
 
     def __init__(self, config, mjTable):
         DataCollector.__init__(self, config, mjTable)
         
-        self.sampleNumber = 1000
-        if "sample_number" in config:
-            self.sampleNumber = int(config["sample_number"])
+        if config.has_option('Main', 'sample_number'):
+            self.sampleNumber = int(config.get('Main', 'sample_number'))
+        else:
+            self.sampleNumber = DEFAULT_SAMPLE_NUM
             
-        self.storeDir = "/var/tmp/info-dynamic-scheduler-generic"
-        if "sample_dir" in config:
-            self.storeDir = config["sample_dir"]
+        if config.has_option('Main', 'sample_dir'):
+            self.storeDir = config.get('Main', 'sample_dir')
+        else:
+            self.storeDir = BasicEstimator.DEFAULT_STORE_DIR
             
         if not os.path.isdir(self.storeDir) or not os.access(self.storeDir, os.W_OK):
             raise Exception("Cannot find or access directory %s" % self.storeDir)
@@ -69,27 +74,29 @@ class BasicEstimator(DataCollector):
         
             try:
 
-                qFile = open(qFilename)
-                for line in qFile:
-                    item = line.strip().split(":")
-                    if len(item) == 2 and item[0] < firstEventFound[0]:
-                        tmpl.append(item)
+                if os.path.exists(qFilename):
+                    qFile = open(qFilename)
+                    for line in qFile:
+                        item = line.strip().split(":")
+                        if len(item) == 2 and item[0] < firstEventFound[0]:
+                            tmpl.append(item)
                 
-                qFile.close()
+                    qFile.close()
+                    qFile = None
                 
                 tmpl.append(self.buffer[qname])
                 
                 if len(tmpl) > self.sampleNumber:
                     del tmpl[0:len(tmpl)-self.sampleNumber]
                 
-                tmps = 0
-                tmpm = -1
+                tmpSum = 0
+                tmpMax = -1
                 for tmpt in tmpl:
-                    tmps = tmps + tmpt[1]
-                    tmpm = max(tmpm, tmpt[1])
+                    tmpSum = tmpSum + tmpt[1]
+                    tmpMax = max(tmpMax, tmpt[1])
                 
-                self.ert[qname] = int(tmps/len(tmpl))            
-                self.wrt[qname] = tmpm
+                self.setERT(qname, int(tmpSum/len(tmpl)))           
+                self.setWRT(qname, tmpMax)
                 
                 qFile = open(qFilename, 'w')
                 for tmpt in tmpl:

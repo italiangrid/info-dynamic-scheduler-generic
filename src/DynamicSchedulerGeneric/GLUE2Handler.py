@@ -168,12 +168,12 @@ def process(config, collector, out=sys.stdout):
                     out.write("GLUE2ComputingShareWaitingJobs: %d\n" % nwait)
                     out.write("GLUE2ComputingShareTotalJobs: %d\n" % (nrun + nwait))
                     
-                    if mqueue in collector.ert:
+                    if collector.isSetERT(mqueue):
                         out.write("GLUE2ComputingShareEstimatedAverageWaitingTime: %d\n" 
-                                  % collector.ert[mqueue])
-                    if mqueue in collector.wrt:
+                                  % collector.getERT(mqueue))
+                    if collector.isSetWRT(mqueue):
                         out.write("GLUE2ComputingShareEstimatedWorstWaitingTime: %d\n" 
-                                  % collector.wrt[mqueue])
+                                  % collector.getWRT(mqueue))
                     
                     nfreeSlots = collector.freeSlots(mqueue, policy.vo)
                     if nfreeSlots >= 0:

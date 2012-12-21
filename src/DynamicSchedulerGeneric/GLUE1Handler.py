@@ -148,12 +148,12 @@ def process(config, collector, out=sys.stdout):
                     out.write("GlueCEStateRunningJobs: %d\n" % nrun)
                     out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
                     
-                    if gluece.queue in collector.ert:
+                    if collector.isSetERT(gluece.queue):
                         out.write("GlueCEStateEstimatedResponseTime: %d\n" 
-                                  % collector.ert[gluece.queue])
-                    if gluece.queue in collector.wrt:
+                                  % collector.getERT(gluece.queue))
+                    if collector.isSetWRT(gluece.queue):
                         out.write("GlueCEStateWorstResponseTime: %d\n" 
-                                  % collector.wrt[gluece.queue])
+                                  % collector.getWRT(gluece.queue))
                     
                     out.write("GlueCEStateFreeJobSlots: %d" % collector.free)
                     
@@ -209,12 +209,12 @@ def process(config, collector, out=sys.stdout):
                     out.write("GlueCEStateRunningJobs: %d\n" % nrun)
                     out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
 
-                    if queue in collector.ert:
+                    if collector.isSetERT(queue):
                         out.write("GlueCEStateEstimatedResponseTime: %d\n" 
-                                  % collector.ert[queue])
-                    if queue in collector.wrt:
+                                  % collector.getERT(queue))
+                    if collector.isSetWRT(queue):
                         out.write("GlueCEStateWorstResponseTime: %d\n" 
-                                  % collector.wrt[queue])
+                                  % collector.getWRT(queue))
                     
                     nfreeSlots = collector.freeSlots(queue, gluevoview.id)
                     if nfreeSlots >= 0:

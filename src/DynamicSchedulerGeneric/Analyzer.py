@@ -117,6 +117,30 @@ class DataCollector:
         self.register(tmpdict)
         
 
+    def getERT(self, qName):
+        return self.ert[qName]
+    
+    def setERT(self, qName, value):
+        if value < self.cycle:
+            self.ert[qName] = int(self.cycle / 2)
+        else:
+            self.ert[qName] = int(value)
+            
+    def isSetERT(self, qName):
+        return qName in self.ert
+    
+    def getWRT(self, qName):
+        return self.wrt[qName]
+    
+    def setWRT(self, qName, value):
+        if value < self.cycle:
+            self.wrt[qName] = int(self.cycle)
+        else:
+            self.wrt[qName] = int(value)
+            
+    def isSetWRT(self, qName):
+        return qName in self.wrt
+    
     def runningCREAMJobsForVO(self, voname):
         key = (DataCollector.CREAMTYPE, 'running', voname)
         if key in self.njStateVO:
@@ -198,55 +222,40 @@ class WaitTimeEstimator(DataCollector):
 
     def __init__(self, config, mjTable):
         DataCollector.__init__(self, config, mjTable)
+        self.localERT = dict()
+        self.localRJ = dict()
+        self.localWRT = dict()
 
     def register(self, evndict):
     
         key1 = evndict['queue']
         
+        if not key1 in self.localERT:
+            self.localERT[key1] = 0
+            self.localRJ[key1] = 0
+        if not key1 in self.localWRT:
+            self.localWRT[key1] = -1
+        
         #
         # TODO missing free slots per queue
         #
-        if self.free > 0:
-            if not key1 in self.ert:
-                self.ert[key1] = self.adjett(0)
-                self.wrt[key1] = self.adjwrt(0)
-            return
 
-        if evndict['state'] == 'running' and 'qtime' in evndict and 'start' in evndict:
+        if self.free == 0 and evndict['state'] == 'running' and 'qtime' in evndict and 'start' in evndict:
             tmpt = evndict['start'] - evndict['qtime']
             
-            if not key1 in self.ert:
-                self.ert[key1] = tmpt
-            else:
-                self.ert[key1] += tmpt
-                
-            if not key1 in self.wrt or self.wrt[key1] < tmpt:
-                self.wrt[key1] = tmpt
+            self.localERT[key1] += tmpt
+            self.localRJ[key1] += 1
+            self.localWRT[key1] = max(self.localWRT[key1], tmpt)
             
         
     def estimate(self):
         
-        for qKey in self.ert:
-            runningJobs = self.runningCREAMJobsOnQueue(qKey) + self.runningESJobsOnQueue(qKey)
-            self.ert[qKey] = self.adjett(self.ert[qKey] / runningJobs)
+        for qKey in self.localERT:
+            if self.localERT[qKey] > 0:
+                self.setERT(qKey, self.localERT[qKey] / self.localRJ[qKey])
             
-            self.wrt[qKey] = self.adjwrt(self.wrt[qKey])
-
-
-    def adjett(self, rawval):
-        if rawval < self.cycle:
-            return int(self.cycle / 2.)
-        else:
-            return int(rawval)
-
-    def adjwrt(self, rawval):
-        if rawval < self.cycle:
-            return int(self.cycle)
-        else:
-            return int(rawval)
-
-
-
+            if self.localWRT[qKey] >= 0:
+                self.setWRT(qKey, self.localWRT[qKey])
 
 
 
