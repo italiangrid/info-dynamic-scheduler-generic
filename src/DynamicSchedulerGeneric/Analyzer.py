@@ -164,47 +164,6 @@ class DataCollector:
 
 
 
-class WaitTimeEstimator(DataCollector):
-
-    def __init__(self, config, mjTable):
-        DataCollector.__init__(self, config, mjTable)
-        self.localERT = dict()
-        self.localRJ = dict()
-        self.localWRT = dict()
-
-    def register(self, evndict):
-    
-        key1 = evndict['queue']
-        
-        if not key1 in self.localERT:
-            self.localERT[key1] = 0
-            self.localRJ[key1] = 0
-        if not key1 in self.localWRT:
-            self.localWRT[key1] = -1
-        
-        #
-        # TODO missing free slots per queue
-        #
-
-        if self.free == 0 and evndict['state'] == 'running' and 'qtime' in evndict and 'start' in evndict:
-            tmpt = evndict['start'] - evndict['qtime']
-            
-            self.localERT[key1] += tmpt
-            self.localRJ[key1] += 1
-            self.localWRT[key1] = max(self.localWRT[key1], tmpt)
-            
-        
-    def estimate(self):
-        
-        for qKey in self.localERT:
-            if self.localERT[qKey] > 0:
-                self.setERT(qKey, self.localERT[qKey] / self.localRJ[qKey])
-            
-            if self.localWRT[qKey] >= 0:
-                self.setWRT(qKey, self.localWRT[qKey])
-
-
-
 
 class DataHandler(Thread):
 
