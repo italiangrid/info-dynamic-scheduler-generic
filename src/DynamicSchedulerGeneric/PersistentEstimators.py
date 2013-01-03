@@ -19,6 +19,7 @@ import os, os.path
 import logging
 
 from DynamicSchedulerGeneric.Analyzer import DataCollector
+from DynamicSchedulerGeneric.Analyzer import AnalyzeException
 
 class BasicEstimator(DataCollector):
 
@@ -41,17 +42,13 @@ class BasicEstimator(DataCollector):
             self.storeDir = BasicEstimator.DEFAULT_STORE_DIR
             
         if not os.path.isdir(self.storeDir) or not os.access(self.storeDir, os.W_OK):
-            raise Exception("Cannot find or access directory %s" % self.storeDir)
+            raise AnalyzeException("Cannot find or access directory %s" % self.storeDir)
         
         self.buffer = dict()
         
     def register(self, evndict):
     
         qname = evndict['queue']
-        
-        #
-        # TODO check for free slots in queue and exit
-        #
         
         if 'qtime' in evndict and 'start' in evndict:
         
@@ -62,10 +59,6 @@ class BasicEstimator(DataCollector):
         
     def estimate(self):
         
-        #
-        # TODO check for free slots in queue and exit
-        #
-
         for qname in self.buffer:
         
             self.buffer[qname].sort()
@@ -107,9 +100,7 @@ class BasicEstimator(DataCollector):
                 qFile = None
 
             except:
-                etype, evalue, etraceback = sys.exc_info()
-                sys.excepthook(etype, evalue, etraceback)
-                #BasicEstimator.logger.error("Error reading %s" % qFilename, exc_info=True)
+                BasicEstimator.logger.error("Error reading %s" % qFilename, exc_info=True)
 
             if qFile:
                 try:
