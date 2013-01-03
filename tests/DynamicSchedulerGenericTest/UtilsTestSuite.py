@@ -45,7 +45,7 @@ class UtilsTestCase(unittest.TestCase):
         pass
 
     def test_getMaxJobsTable_ok(self):
-        try:
+
             workspace = Workspace(vomap = self.vomap)
             workspace.setMaxJobCmd(self.mjTable)
             
@@ -57,8 +57,6 @@ class UtilsTestCase(unittest.TestCase):
                             and 'dteam' in result and result['dteam'] == 150
                             and 'infngrid' in result and result['infngrid'] == 360)
                 
-        except Exception, test_error:
-            self.fail(repr(test_error))
 
 
     def test_getMaxJobsTable_wrongexit(self):
@@ -76,8 +74,6 @@ exit 1
         except DynSchedUtils.UtilsException, test_error:
             msg = str(test_error)
             self.assertTrue(msg.startswith("VO max jobs backend command returned"))
-        except Exception, generic_error:
-            self.fail(repr(test_error))
         
 
     def test_getMaxJobsTable_nofile(self):
@@ -91,8 +87,6 @@ exit 1
         except DynSchedUtils.UtilsException, test_error:
             msg = str(test_error)
             self.assertTrue(msg.startswith("Error running"))
-        except Exception, generic_error:
-            self.fail(repr(test_error))
        
 if __name__ == '__main__':
     unittest.main()

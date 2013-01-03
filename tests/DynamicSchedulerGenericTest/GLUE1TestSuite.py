@@ -82,7 +82,7 @@ class GLUE1TestCase(unittest.TestCase):
 
 
     def test_process_ok(self):
-        try:
+
             glueceuniqueid = 'GlueCEUniqueID=cream-38.pd.infn.it:8443/cream-pbs-creamtest1,mds-vo-name=resource,o=grid'
             gluevoviewid = 'GlueVOViewLocalID=dteam,' + glueceuniqueid
             ldif = """
@@ -115,11 +115,6 @@ GlueCEAccessControlBaseRule: VO:dteam
             result = result and dOut.running[gluevoviewid] == 2
             self.assertTrue(result)
             
-        except Exception, test_error:
-            etype, value, traceback = sys.exc_info()
-            sys.excepthook(etype, value, traceback)
-            self.fail(repr(test_error))
-            
 
 
 
@@ -149,10 +144,6 @@ GlueCEAccessControlBaseRule: VO:dteam
         except GLUE1Handler.GLUE1Exception, glue_error:
             msg = str(glue_error)
             self.assertTrue(msg.startswith("Invalid foreign key"))      
-        except Exception, test_error:
-            etype, value, traceback = sys.exc_info()
-            sys.excepthook(etype, value, traceback)
-            self.fail(repr(test_error))
         
 
     

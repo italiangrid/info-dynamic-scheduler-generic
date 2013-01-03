@@ -47,7 +47,6 @@ class AnalyzerTestCase(unittest.TestCase):
         pass
 
     def test_analyze_ok(self):
-        try:
         
             jTable = [
                       ("atlasprod", "creamtest1", 'running', 1327564866, "creXX_23081970"),
@@ -84,8 +83,6 @@ class AnalyzerTestCase(unittest.TestCase):
             
             self.assertTrue(result)
             
-        except Exception, test_error:
-            self.fail(str(test_error))
 
 
     def test_analyze_err_from_script(self):
@@ -108,12 +105,10 @@ sys.exit(1)
         except Analyzer.AnalyzeException, test_error:
             msg = str(test_error)
             self.assertTrue(msg.startswith("Dummy error message"))
-        except Exception, test_error:
-            self.fail(repr(test_error))
 
 
     def test_analyze_with_maxjobforvo(self):
-        try:
+
             jTable = [
                       ("atlasprod", "creamtest1", 'running', 1327564866, "creXX_23081970"),
                       ("dteamgold", 'creamtest2', 'running', 1327566866, "creXX_23081972"),
@@ -141,8 +136,6 @@ sys.exit(1)
             
             self.assertTrue(collector.freeSlots(None, 'dteam') == 3)
 
-        except Exception, test_error:
-            self.fail(str(test_error))
 
 
 

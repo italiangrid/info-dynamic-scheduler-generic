@@ -79,7 +79,7 @@ class GLUE1TestCase(unittest.TestCase):
         return script
         
     def test_process_ok(self):
-        try:
+
             glue2shareid = 'GLUE2ShareID=creamtest1_dteam_abc,GLUE2ServiceID=abc,GLUE2GroupID=resource,o=glue'
             ldif = """
 dn: GLUE2PolicyID=creamtest1_dteam_abc_policy,%s
@@ -106,10 +106,6 @@ GLUE2ComputingShareMappingQueue: creamtest1
             result = result and dOut.running[glue2shareid] == 2
             self.assertTrue(result)
             
-        except Exception, test_error:
-            etype, value, traceback = sys.exc_info()
-            sys.excepthook(etype, value, traceback)
-            self.fail(repr(test_error))
 
     def test_process_missing_share(self):
         try:
@@ -133,8 +129,6 @@ GLUE2MappingPolicyShareForeignKey: creamtest1_dteam_abc
         except GLUE2Handler.GLUE2Exception, glue_error:
             msg = str(glue_error)
             self.assertTrue(msg.startswith("Invalid foreign key"))      
-        except Exception, test_error:
-            self.fail(repr(test_error))
 
 
     def test_process_missing_vo_in_policy(self):
@@ -164,8 +158,6 @@ GLUE2MappingPolicyShareForeignKey: creamtest1_dteam_abc
         except GLUE2Handler.GLUE2Exception, glue_error:
             msg = str(glue_error)
             self.assertTrue(msg == "Missing mandatory attribute GLUE2PolicyUserDomainForeignKey")      
-        except Exception, test_error:
-            self.fail(repr(test_error))
 
 
 if __name__ == '__main__':
