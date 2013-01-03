@@ -60,6 +60,7 @@ class Workspace:
             config.set("Main", "cream_prefix", "creXX_")
             if "enableES" in args and args["enableES"] == "true":
                 config.set("Main", "es_prefix", "esXX_")
+            config.set("Main", "sample_dir", self.workspace)
             
             if not "nomaxjobcmd" in args or args["nomaxjobcmd"] <> "true":
                 config.set("Scheduler", "vo_max_jobs_cmd", self.workspace +"/maxjobs-mock")

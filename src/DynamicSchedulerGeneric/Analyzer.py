@@ -21,6 +21,8 @@ import subprocess
 import logging
 from threading import Thread
 
+import Utils
+
 class AnalyzeException(Exception):
     
     def __init__(self, msg):
@@ -313,6 +315,7 @@ class DataHandler(Thread):
             
         except:
             etype, evalue, etraceback = sys.exc_info()
+            sys.excepthook(etype, evalue, etraceback)
             self.internerr = "%s: (%s)" % (etype, evalue)
 
 
@@ -336,7 +339,8 @@ def analyze(config, maxjobTable):
     if not config.has_option('LRMS','lrms_backend_cmd'):
         raise AnalyzeException("Missing LRMS backend command in configuration")
     
-    collector = WaitTimeEstimator(config, maxjobTable)
+    estimatorClass = Utils.loadEstimator(config)
+    collector = estimatorClass(config, maxjobTable)
     
     cmd = shlex.split(config.get('LRMS','lrms_backend_cmd'))
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

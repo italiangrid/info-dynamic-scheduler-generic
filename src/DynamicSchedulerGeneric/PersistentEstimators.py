@@ -18,6 +18,8 @@ import sys
 import os, os.path
 import logging
 
+from DynamicSchedulerGeneric.Analyzer import DataCollector
+
 class BasicEstimator(DataCollector):
 
     logger = logging.getLogger("PersistentEstimators.BasicEstimator")
@@ -31,7 +33,7 @@ class BasicEstimator(DataCollector):
         if config.has_option('Main', 'sample_number'):
             self.sampleNumber = int(config.get('Main', 'sample_number'))
         else:
-            self.sampleNumber = DEFAULT_SAMPLE_NUM
+            self.sampleNumber = BasicEstimator.DEFAULT_SAMPLE_NUM
             
         if config.has_option('Main', 'sample_dir'):
             self.storeDir = config.get('Main', 'sample_dir')
@@ -51,10 +53,11 @@ class BasicEstimator(DataCollector):
         # TODO check for free slots in queue and exit
         #
         
-        if not qname in self.buffer:
-            self.buffer[qname] = list()
-        
         if 'qtime' in evndict and 'start' in evndict:
+        
+            if not qname in self.buffer:
+                self.buffer[qname] = list()
+        
             self.buffer[qname].append((evndict['qtime'], evndict['start'] - evndict['qtime']))
         
     def estimate(self):
@@ -84,8 +87,7 @@ class BasicEstimator(DataCollector):
                     qFile.close()
                     qFile = None
                 
-                tmpl.append(self.buffer[qname])
-                
+                tmpl = tmpl + self.buffer[qname]
                 if len(tmpl) > self.sampleNumber:
                     del tmpl[0:len(tmpl)-self.sampleNumber]
                 
@@ -105,12 +107,18 @@ class BasicEstimator(DataCollector):
                 qFile = None
 
             except:
-                BasicEstimator.logger.error("Error reading %s" % qFilename, exc_info=true)
+                etype, evalue, etraceback = sys.exc_info()
+                sys.excepthook(etype, evalue, etraceback)
+                #BasicEstimator.logger.error("Error reading %s" % qFilename, exc_info=True)
 
             if qFile:
                 try:
                     qFile.close()
                 except:
-                    BasicEstimator.logger.error("Cannot close %s" % qFilename, exc_info=true)
+                    BasicEstimator.logger.error("Cannot close %s" % qFilename, exc_info=True)
+
+
+def getEstimatorList():
+    return [ BasicEstimator ]
 
 

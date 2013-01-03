@@ -17,6 +17,7 @@
 import shlex
 import subprocess
 import ConfigParser
+import imp
 
 class UtilsException(Exception):
     
@@ -89,5 +90,45 @@ def getMaxJobsTable(config):
         raise UtilsException('Error running "%s": %s' % (raw_cmd, repr(os_error)))
     except ValueError, value_error:
         raise UtilsException('Wrong arguments for "%s": %s' % (raw_cmd, repr(value_error)))
+
+
+def loadEstimator(config):
+    if config.has_option('Main','estimator'):
+        estStr = config.get('Main','estimator')
+    else:
+        estStr = 'DynamicSchedulerGeneric/PersistentEstimators:BasicEstimator'
+    
+    idx = estStr.find(':')
+    if idx < 0:
+        moduleName = estStr
+        className = ''
+    else:
+        tmpl = estStr.split(':')
+        moduleName = tmpl[0]
+        className = tmpl[1]
+    
+    modFile = None
+    try:
+    
+        modFile, modPath, modDescr = imp.find_module(moduleName)
+        estMod = imp.load_module(moduleName, modFile, modPath, modDescr)
+        
+        classList = estMod.getEstimatorList()
+        
+        if className == '':
+            return classList[0]
+        
+        for classItem in classList:
+            if classItem.__name__ == className:
+                return classItem
+        
+        raise Exception("Cannot find class %s" % className)
+        
+    finally:
+        if modFile:
+            modFile.close()
+    
+    return None
+
 
 
