@@ -51,7 +51,7 @@ class EstimatorsTestCase(unittest.TestCase):
         pass
     
     def test_BasicEstimator_ok(self):
-        try:
+
             estimator = BasicEstimatorWrapper()
             
             estimator.register({'queue' : 'dteam', 'qtime' : 10, 'start' : 25})
@@ -63,24 +63,18 @@ class EstimatorsTestCase(unittest.TestCase):
             
             self.assertTrue(estimator.localERT['dteam'] == 21)
             
-        except Exception, test_error:
-            etype, evalue, etraceback = sys.exc_info()
-            sys.excepthook(etype, evalue, etraceback)
-            self.fail(str(test_error))
 
     def test_BasicEstimator_empty(self):
-        try:
+
             estimator = BasicEstimatorWrapper()
             
             estimator.estimate()
             
             self.assertTrue(len(estimator.localERT) == 0)
             
-        except Exception, test_error:
-            self.fail(str(test_error))
 
     def test_BasicEstimator_missing_time(self):
-        try:
+
             estimator = BasicEstimatorWrapper()
             
             estimator.register({'queue' : 'dteam', 'qtime' : 10, 'start' : 25})
@@ -92,12 +86,9 @@ class EstimatorsTestCase(unittest.TestCase):
             
             self.assertTrue(estimator.localERT['dteam'] == 15)
             
-        except Exception, test_error:
-            self.fail(str(test_error))
-
 
     def test_BasicEstimator_empty_for_missing_time(self):
-        try:
+
             estimator = BasicEstimatorWrapper()
             
             estimator.register({'queue' : 'dteam', 'start' : 130})
@@ -108,9 +99,37 @@ class EstimatorsTestCase(unittest.TestCase):
             
             self.assertTrue(len(estimator.localERT) == 0)
             
-        except Exception, test_error:
-            self.fail(str(test_error))
 
+
+    def test_BasicEstimator_multi_estimate(self):
+        
+            abs_offset = 10
+            rel1_offset = 20
+            rel2_offset = 40
+            
+            estimator = BasicEstimatorWrapper()
+            
+            for k in range(estimator.sampleNumber):
+                estimator.register({'queue' : 'dteam', 
+                                    'qtime' : abs_offset + k * 10,
+                                    'start' : abs_offset + rel1_offset + k * 10})
+            
+            estimator.estimate()
+            
+            self.assertTrue(estimator.localERT['dteam'] == rel1_offset)
+            
+            abs_offset = abs_offset + estimator.sampleNumber * 10 + 100
+
+            for k in range(estimator.sampleNumber / 2):
+                estimator.register({'queue' : 'dteam',
+                                    'qtime' : abs_offset + k * 10,
+                                    'start' : abs_offset + rel2_offset + k * 10})
+            
+            estimator.estimate()
+            
+            self.assertTrue(estimator.localERT['dteam'] == (rel1_offset + rel2_offset)/2)
+            
+            
 
 if __name__ == '__main__':
     unittest.main()
