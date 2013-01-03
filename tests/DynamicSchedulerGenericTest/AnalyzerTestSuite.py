@@ -75,12 +75,12 @@ class AnalyzerTestCase(unittest.TestCase):
             
             collector = Analyzer.analyze(config, {})
             
-            result =            collector.runningCREAMJobsForVO('atlas') == 1
-            result = result and collector.queuedCREAMJobsForVO('atlas') == 1
-            result = result and collector.runningCREAMJobsForVO('dteam') == 2
-            result = result and collector.queuedCREAMJobsForVO('dteam') == 1
-            result = result and collector.runningCREAMJobsForVO('infngrid') == 4
-            result = result and collector.queuedCREAMJobsForVO('infngrid') == 1
+            result =            collector.runningJobsForVO('atlas') == 1
+            result = result and collector.queuedJobsForVO('atlas') == 1
+            result = result and collector.runningJobsForVO('dteam') == 2
+            result = result and collector.queuedJobsForVO('dteam') == 1
+            result = result and collector.runningJobsForVO('infngrid') == 4
+            result = result and collector.queuedJobsForVO('infngrid') == 1
             
             self.assertTrue(result)
             
@@ -111,39 +111,6 @@ sys.exit(1)
         except Exception, test_error:
             self.fail(repr(test_error))
 
-
-    def test_analyze_cream_and_es(self):
-        try:
-            jTable = [
-                      ("atlasprod", "creamtest1", 'running', 1327564866, "creXX_23081970"),
-                      ("atlasprod", 'creamtest2', 'queued', 1327565866, "creXX_23081971"),
-                      ("atlasprod", "creamtest1", 'running', 1327564866, "esXX_23081970"),
-                      ("atlasprod", 'creamtest2', 'queued', 1327565866, "esXX_23081971"),
-                      ("atlasprod", 'creamtest2', 'queued', 1327565866, "esXX_23081972")
-                     ]
-            workspace = Workspace(vomap = self.vomap, enableES = 'true')
-            
-            script = self.headerfmt % (5, 0, 1327574866, 26)
-            for jItem in jTable:
-                script += self.dictfmt % jItem            
-            script += self.footerfmt
-            
-            workspace.setLRMSCmd(script)
-            
-            cfgfile = workspace.getConfigurationFile()
-            config = DynSchedUtils.readConfigurationFromFile(cfgfile)
-            
-            collector = Analyzer.analyze(config, {})
-            
-            result =            collector.runningCREAMJobsForVO('atlas') == 1
-            result = result and collector.queuedCREAMJobsForVO('atlas') == 1
-            result = result and collector.runningESJobsForVO('atlas') == 1
-            result = result and collector.queuedESJobsForVO('atlas') == 2
-            self.assertTrue(result)
-            
-        except Exception, test_error:
-            self.fail(str(test_error))
-            
 
     def test_analyze_with_maxjobforvo(self):
         try:

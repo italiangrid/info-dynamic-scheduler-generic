@@ -140,9 +140,9 @@ def process(config, collector, out=sys.stdout):
                     
                     ce_fkeys[gluece.id] = gluece.queue
                 
-                    nwait = collector.queuedCREAMJobsOnQueue(gluece.queue)
+                    nwait = collector.queuedJobsOnQueue(gluece.queue)
                         
-                    nrun = collector.runningCREAMJobsOnQueue(gluece.queue)
+                    nrun = collector.runningJobsOnQueue(gluece.queue)
                 
                     out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
                     out.write("GlueCEStateRunningJobs: %d\n" % nrun)
@@ -201,9 +201,9 @@ def process(config, collector, out=sys.stdout):
                         raise GLUE1Exception("Invalid foreign key for " + gluevoview.id)
                     queue = ce_fkeys[gluevoview.fkey]
                     
-                    nwait = collector.queuedCREAMJobsOnQueueForVO(queue, gluevoview.id)
+                    nwait = collector.queuedJobsOnQueueForVO(queue, gluevoview.id)
 
-                    nrun = collector.runningCREAMJobsOnQueueForVO(queue, gluevoview.id)
+                    nrun = collector.runningJobsOnQueueForVO(queue, gluevoview.id)
                     
                     out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
                     out.write("GlueCEStateRunningJobs: %d\n" % nrun)
