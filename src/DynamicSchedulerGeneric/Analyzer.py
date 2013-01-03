@@ -31,6 +31,8 @@ class AnalyzeException(Exception):
 
 class DataCollector:
 
+    logger = logging.getLogger("Analyzer.DataCollector")
+    
     def __init__(self, config, mjTable):
     
         self.config = config
@@ -39,7 +41,14 @@ class DataCollector:
         self.active = -1
         self.free = -1
         self.now = -1
+        
         self.cycle = -1
+        if config.has_option('Scheduler','cycle_time'):
+            try:
+                self.cycle = int(config.get('Scheduler','cycle_time'))
+            except:
+                DataCollector.logger.error("Wrong cycle_time; default used")
+            
         
         self.njStateVO = {}
         self.njQueueState = {}
@@ -210,7 +219,7 @@ class DataHandler(Thread):
                     try:
                         self.collector.load(ematch.group(1))
                     except AnalyzeException, collect_error:
-                        logger.error("Cannot analyze: %s (%s)" %(ematch.group(1), str(collect_error)))
+                        DataHandler.logger.error("Cannot analyze: %s (%s)" %(ematch.group(1), str(collect_error)))
 
                 line = self.stream.readline();
         
