@@ -23,6 +23,7 @@ import os
 import getopt
 import string
 import logging
+import logging.config
 
 from DynamicSchedulerGeneric import Analyzer
 from DynamicSchedulerGeneric import GLUE1Handler
