@@ -27,7 +27,17 @@ ce_regex = re.compile("dn:\s*GlueCEUniqueID\s*=\s*[^$]+")
 vo_regex = re.compile("dn:\s*GlueVOViewLocalID\s*=\s*[^$]+")
 attr_regex = re.compile("(Glue\w+)\s*:\s*([^$]+)")
     
+class ACBR:
 
+    def __init__(self, acbrStr):
+        tmpl = acbrStr.split(':')
+        if len(tmpl)<2:
+            raise GLUE1Exception("Wrong format for ACBR: %s" % acbrStr)
+        self.fmt = tmpl[0].strip()
+        self.name = tmpl[1].strip()
+        if self.fmt <> 'VO' and self.fmt <> 'VOMS':
+            raise GLUE1Exception("Wrong type for ACBR: %s" % acbrStr)
+        
 class GlueCEContainer:
 
     def __init__(self):
@@ -54,11 +64,8 @@ class GlueCEContainer:
                 
         elif key == "GlueCEAccessControlBaseRule":
             
-            if value.startswith("VO:") or value.startswith("VOMS:"):
-                voname = value.split(':')[1]
-                if len(voname) == 0:
-                    raise GLUE1Exception("Empty VO name in acbr")
-                self.acbrs.add(voname)
+            acbrItem = ACBR(value)
+            self.acbrs.add(acbrItem.name)
 
 
         
@@ -73,6 +80,7 @@ class GlueVOViewContainer:
 
     def __init__(self):
         self.id = None
+        self.name = None
         self.fkey = None
         
     def load(self, line):
@@ -85,24 +93,29 @@ class GlueVOViewContainer:
         
         if key == "GlueVOViewLocalID":
             
-            #
-            # TODO verify this is the name of the VO  (see ACBR)
-            #
             self.id = value
             
         elif key == "GlueChunkKey":
         
             tmpl = value.split('=')
             if len(tmpl)<2:
-                raise GLUE1Exception("Wrong format for GlueChunkKey")
+                raise GLUE1Exception("Wrong format for GlueChunkKey: %s" % value)
             label = tmpl[0].strip()
             tmpk = tmpl[1].strip()
             if label == "GlueCEUniqueID" and len(tmpk) > 0:
                 self.fkey = tmpk
+        
+        elif key == "GlueCEAccessControlBaseRule" and self.name == None:
+            
+            # select the first valid ACBR to be the vo name
+            acbrItem = ACBR(value)
+            self.name = acbrItem.name
 
     def close(self):
         if self.fkey == None:
-            raise GLUE1Exception("Missing foreing key for GlueCEUniqueID")
+            raise GLUE1Exception("Missing foreing key for GlueCEUniqueID for %s" % self.id)
+        if self.name == None:
+            raise GLUE1Exception("Missing ACBR for %s" % self.id)
 
 
 
@@ -201,9 +214,9 @@ def process(config, collector, out=sys.stdout):
                         raise GLUE1Exception("Invalid foreign key for " + gluevoview.id)
                     queue = ce_fkeys[gluevoview.fkey]
                     
-                    nwait = collector.queuedJobsOnQueueForVO(queue, gluevoview.id)
+                    nwait = collector.queuedJobsOnQueueForVO(queue, gluevoview.name)
 
-                    nrun = collector.runningJobsOnQueueForVO(queue, gluevoview.id)
+                    nrun = collector.runningJobsOnQueueForVO(queue, gluevoview.name)
                     
                     out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
                     out.write("GlueCEStateRunningJobs: %d\n" % nrun)
@@ -216,7 +229,7 @@ def process(config, collector, out=sys.stdout):
                         out.write("GlueCEStateWorstResponseTime: %d\n" 
                                   % collector.getWRT(queue))
                     
-                    nfreeSlots = collector.freeSlots(queue, gluevoview.id)
+                    nfreeSlots = collector.freeSlots(queue, gluevoview.name)
                     if nfreeSlots >= 0:
                         out.write("GlueCEStateFreeJobSlots: %d" % nfreeSlots)
 

@@ -48,6 +48,7 @@ class GLUE1TestCase(unittest.TestCase):
                       "dteamgold": "dteam",
                       "dteamsilver": "dteam",
                       "dteambronze": "dteam",
+                      "dteamadmin" : "/dteam/ROLE=admin",
                       "infngridlow": "infngrid",
                       "infngridmedium": "infngrid",
                       "infngridhigh": "infngrid"}
@@ -72,7 +73,8 @@ class GLUE1TestCase(unittest.TestCase):
                   ("dteamsilver", "creamtest1", 'running', 1327569866, "creXX_23081974"),
                   ("dteambronze", "creamtest1", 'queued', 1327570866, "creXX_23081975"),
                   ("infngridlow", "creamtest1", 'queued', 1327572866, "creXX_23081976"),
-                  ("infngridmedium", "creamtest1", 'running', 1327573866, "creXX_23081977")
+                  ("infngridmedium", "creamtest1", 'running', 1327573866, "creXX_23081977"),
+                  ("dteamadmin", "creamtest1", 'running', 1327574866, "creXX_23081978")
                  ]
         script = self.headerfmt % (5, 0, 1327574866, 26)
         for jItem in jTable:
@@ -110,7 +112,7 @@ GlueCEAccessControlBaseRule: VO:dteam
             GLUE1Handler.process(config, collector, dOut)
             
             result = dOut.queued[glueceuniqueid] == 2
-            result = result and dOut.running[glueceuniqueid] == 3
+            result = result and dOut.running[glueceuniqueid] == 4
             result = result and dOut.queued[gluevoviewid] == 1
             result = result and dOut.running[gluevoviewid] == 2
             self.assertTrue(result)
@@ -144,7 +146,38 @@ GlueCEAccessControlBaseRule: VO:dteam
         except GLUE1Handler.GLUE1Exception, glue_error:
             msg = str(glue_error)
             self.assertTrue(msg.startswith("Invalid foreign key"))      
-        
+
+
+    def test_process_voviewid_mismatch(self):
+            
+            glueceuniqueid = 'GlueCEUniqueID=cream-38.pd.infn.it:8443/cream-pbs-creamtest1,mds-vo-name=resource,o=grid'
+            gluevoviewid = 'GlueVOViewLocalID=dteam_admin,' + glueceuniqueid
+            ldif = """
+dn: %s
+GlueVOViewLocalID: dteam_admin
+GlueChunkKey: GlueCEUniqueID=cream-38.pd.infn.it:8443/cream-pbs-creamtest1
+GlueCEAccessControlBaseRule: VOMS:/dteam/ROLE=admin
+
+dn: %s
+GlueCEUniqueID: cream-38.pd.infn.it:8443/cream-pbs-creamtest1
+GlueCEName: creamtest1
+GlueCEAccessControlBaseRule: VOMS:/dteam/ROLE=admin
+""" % (gluevoviewid, glueceuniqueid)
+
+            workspace = Workspace(vomap = self.vomap)            
+            workspace.setLRMSCmd(self._script())
+            workspace.setGLUE1StaticFile(ldif)
+            
+            cfgfile = workspace.getConfigurationFile()
+            config = DynSchedUtils.readConfigurationFromFile(cfgfile)
+            
+            dOut = DummyOutput()
+            collector = Analyzer.analyze(config, {})
+            GLUE1Handler.process(config, collector, dOut)
+            
+            result = dOut.running[glueceuniqueid] == 4
+            result = result and dOut.running[gluevoviewid] == 1
+            self.assertTrue(result)
 
     
 if __name__ == '__main__':
