@@ -29,67 +29,65 @@ from DynamicSchedulerGeneric import GLUE1Handler
 from DynamicSchedulerGeneric import GLUE2Handler
 from DynamicSchedulerGeneric import Utils as DynSchedUtils
 
-GLUE1FORMAT = 1
-GLUE2FORMAT = 2
-BOTHFORMAT = 3
-
-
-def usage():
-    print "Usage: lcg-info-dynamic-scheduler -c <cfg_file>"
 
 def main():
 
-    #
-    # TODO hardcoded log conf file
-    #
-    logging.config.fileConfig("/etc/dynsched-generic/logging.conf")
-    logger = logging.getLogger("lcg-info-dynamic-scheduler.main")
-
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "c:", ["config="])
+        opts, args = getopt.getopt(sys.argv[1:], "hc:", ["help", "config="])
     except getopt.GetoptError:
-        logger.error("Error parsing command line")
-        usage()
-        sys.exit(2)
+        sys.exit(1)
 
     cfgfile = None
 
     for opt_name, opt_arg in opts:
         if opt_name in ("-c", "--config"):
             cfgfile = opt_arg
-        
+        if opt_name in ("-h", "--help"):
+            print """Usage: lcg-info-dynamic-scheduler -c <cfg_file>
+The executable returns the following codes:
+  0 Execution correctly performed
+  1 Command line parser error (no message on standard error)
+  2 Missing configuration file path (no message on standard error)
+  3 Configuration parser error (messages on log)
+  4 Execution error (messages on log)
+"""
     if not cfgfile:
-        logger.error("No config file specified")
-        usage()
         sys.exit(2)
+    
+    try:
+    
+        logging.config.fileConfig(cfgfile)
+        logger = logging.getLogger("lcg-info-dynamic-scheduler")
+
+    except Exception, conf_log_err:
+        logging.basicConfig(stream=sys.stderr)
+        logger = logging.getLogger("lcg-info-dynamic-scheduler")
+        logger.error("Cannot parse log configuration file %s: %s" % (cfgfile, repr(conf_log_err)))
     
     config = None
     try:
+
         config = DynSchedUtils.readConfigurationFromFile(cfgfile)
+            
     except Exception, config_error:
-        logger.error("While parsing config file %s: %s", cfgfile, repr(config_error))
-        sys.exit(2)
+        logger.error("Cannot parse configuration file %s: %s" % (cfgfile, repr(config_err)))
+        sys.exit(3)
     
-    outputformat = BOTHFORMAT
-    if config.has_option('Main','outputformat'):
-        tmps = config.get('Main','outputformat').lower().strip()
-        if tmps == "glue1":
-            outputformat = GLUE1FORMAT
-        elif tmps == "glue2":
-            outputformat = GLUE2FORMAT
-        elif tmps <> "both":
-            logger.error("Wrong argument outputformat: %s", tmps)
-            sys.exit(2)
+    try:
     
+        mjobTable = DynSchedUtils.getMaxJobsTable(config)
+        collector = Analyzer.analyze(config, mjobTable)
 
-    mjobTable = DynSchedUtils.getMaxJobsTable(config)
-    collector = Analyzer.analyze(config, mjobTable)
-
-    if outputformat & GLUE1FORMAT:
-        GLUE1Handler.process(config, collector)
+        outputformat = config.get('Main','outfmtcode')    
+        if outputformat & DynSchedUtils.GLUE1FORMAT:
+            GLUE1Handler.process(config, collector)
     
-    if outputformat & GLUE2FORMAT:
-        GLUE2Handler.process(config, collector)
+        if outputformat & DynSchedUtils.GLUE2FORMAT:
+            GLUE2Handler.process(config, collector)
+            
+    except Exception, exec_error:
+        logger.error("Execution error: %s" % repr(exec_error))
+        sys.exit(4)
 
 if __name__ == "__main__":
     main()

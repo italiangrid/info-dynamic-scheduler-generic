@@ -19,6 +19,9 @@ import subprocess
 import ConfigParser
 import imp
 
+GLUE1FORMAT = 1
+GLUE2FORMAT = 2
+
 class UtilsException(Exception):
     
     def __init__(self, msg):
@@ -47,6 +50,19 @@ def readConfigurationFromFile(configfile):
                 vo = tmpl[1].strip()
                 vomap[group] = vo
     config.set('Main','vomap', vomap)
+    
+    if not config.has_option('Main','outputformat'):
+        config.set('Main','outfmtcode', GLUE1FORMAT + GLUE2FORMAT)
+    else:
+        tmpOpt = config.get('Main','outputformat').lower().strip()
+        if tmpOpt == "glue1":
+            config.set('Main','outfmtcode', GLUE1FORMAT) 
+        elif tmpOpt == "glue2":
+            config.set('Main','outfmtcode', GLUE2FORMAT)
+        elif tmpOpt == "both":
+            config.set('Main','outfmtcode', GLUE1FORMAT + GLUE2FORMAT)
+        else:
+            raise UtilsException("Wrong argument outputformat: %s", tmpOpt)
     
     return config
 
