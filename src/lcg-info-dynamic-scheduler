@@ -80,10 +80,10 @@ The executable returns the following codes:
         collector = Analyzer.analyze(config, mjobTable)
 
         outputformat = config.get('Main','outfmtcode')    
-        if outputformat & DynSchedUtils.GLUE1FORMAT:
+        if  DynSchedUtils.GLUE1FORMAT in outputformat:
             GLUE1Handler.process(config, collector)
     
-        if outputformat & DynSchedUtils.GLUE2FORMAT:
+        if DynSchedUtils.GLUE2FORMAT in outputformat:
             GLUE2Handler.process(config, collector)
             
     except Exception, exec_error:
