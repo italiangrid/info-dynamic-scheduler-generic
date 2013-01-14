@@ -63,7 +63,6 @@ The executable returns the following codes:
     except Exception, conf_log_err:
         logging.basicConfig(stream=sys.stderr)
         logger = logging.getLogger("lcg-info-dynamic-scheduler")
-        logger.error("Cannot parse log configuration file %s: %s" % (cfgfile, repr(conf_log_err)))
     
     config = None
     try:
