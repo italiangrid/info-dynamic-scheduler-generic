@@ -86,7 +86,7 @@ The executable returns the following codes:
             GLUE2Handler.process(config, collector)
             
     except Exception, exec_error:
-        logger.error("Execution error: %s" % repr(exec_error))
+        logger.error("Execution error: %s" % str(exec_error))
         sys.exit(4)
 
 if __name__ == "__main__":
