@@ -55,14 +55,20 @@ class BasicEstimator(DataCollector):
             if not qname in self.buffer:
                 self.buffer[qname] = list()
         
+            BasicEstimator.logger.debug('Registering ' + str(evndict))
             self.buffer[qname].append((evndict['qtime'], evndict['start'] - evndict['qtime']))
         
     def estimate(self):
         
         for qname in self.buffer:
         
+            if len(self.buffer[qname]) == 0:
+                BasicEstimator.logger.debug('No events for %s' % qname)
+                continue
+            
             self.buffer[qname].sort()
             firstEventFound = self.buffer[qname][0]
+            BasicEstimator.logger.debug('First element for %s is %s' % (qname, str(firstEventFound)))
             
             tmpl = list()
             qFilename = self.storeDir + '/' + qname
@@ -73,7 +79,8 @@ class BasicEstimator(DataCollector):
                 if os.path.exists(qFilename):
                     qFile = open(qFilename)
                     for line in qFile:
-                        item = line.strip().split(":")
+                        tpmt = line.strip().split(":")
+                        item = (int(tmpt[0]), int(tmpt[1]))
                         if len(item) == 2 and item[0] < firstEventFound[0]:
                             tmpl.append(item)
                 
