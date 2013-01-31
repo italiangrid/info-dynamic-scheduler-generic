@@ -17,6 +17,8 @@
 import sys
 import os, os.path
 import logging
+import time
+import math
 
 from DynamicSchedulerGeneric.Analyzer import DataCollector
 from DynamicSchedulerGeneric.Analyzer import AnalyzeException
@@ -26,7 +28,7 @@ class BasicEstimator(DataCollector):
     logger = logging.getLogger("PersistentEstimators.BasicEstimator")
     
     DEFAULT_STORE_DIR = "/var/tmp/info-dynamic-scheduler-generic"
-    DEFAULT_SAMPLE_NUM = 5000
+    DEFAULT_SAMPLE_NUM = 1000
 
     def __init__(self, config, mjTable):
         DataCollector.__init__(self, config, mjTable)
@@ -45,19 +47,53 @@ class BasicEstimator(DataCollector):
             raise AnalyzeException("Cannot find or access directory %s" % self.storeDir)
         
         self.buffer = dict()
+        self.now = int(time.time())
+        self.nqueued = dict()
+        self.nrun = dict()
         
     def register(self, evndict):
     
         qname = evndict['queue']
         
-        if 'qtime' in evndict and 'start' in evndict:
+        if not qname in self.nqueued:
+            self.nqueued[qname] = 0
+        if not qname in self.nrun:
+            self.nrun[qname] = 0
         
-            if not qname in self.buffer:
-                self.buffer[qname] = list()
+        if evndict['state'] == 'queued':
+            self.nqueued[qname] += 1
+            
+        if evndict['state'] == 'running':
+            self.nrun[qname] += 1
         
-            BasicEstimator.logger.debug('Registering ' + str(evndict))
-            self.buffer[qname].append((evndict['qtime'], evndict['start'] - evndict['qtime']))
+            if 'start' in evndict:
         
+                if not qname in self.buffer:
+                    self.buffer[qname] = list()
+        
+                BasicEstimator.logger.debug('Updating service time for ' + str(evndict))
+                record = (evndict['start'], evndict['jobid'], self.now - evndict['start'])
+                self.buffer[qname].append(record)
+
+
+        
+    # Given:
+    # N      number of queued jobs
+    # R      number of running jobs
+    # K      number of slots
+    # Savg   average service time
+    # Smax   max service time
+    #
+    # for each iteration we have:
+    #
+    #       / 0                          R < K
+    # ERT = | 
+    #       \ ceil((N / K) + 1) * Savg   R = K
+    #
+    #       / 0                          R < K
+    # WRT = | 
+    #       \ ceil((N / K) + 1) * Smax   R = K
+    #
     def estimate(self):
         
         for qname in self.buffer:
@@ -66,43 +102,96 @@ class BasicEstimator(DataCollector):
                 BasicEstimator.logger.debug('No events for %s' % qname)
                 continue
             
-            self.buffer[qname].sort()
-            firstEventFound = self.buffer[qname][0]
-            BasicEstimator.logger.debug('First element for %s is %s' % (qname, str(firstEventFound)))
+            if self.nqueued[qname] > 0:
+                nslots = self.nrun[qname]
+            else:
+                #undef K
+                nslots = -1
             
+            self.buffer[qname].sort()
+            buffIdx = 0
+
             tmpl = list()
-            qFilename = self.storeDir + '/' + qname
+            qFilename = os.path.join(self.storeDir, qname)
             qFile = None
-        
+            
             try:
 
                 if os.path.exists(qFilename):
                     qFile = open(qFilename)
                     for line in qFile:
-                        tpmt = line.strip().split(":")
-                        item = (int(tmpt[0]), int(tmpt[1]))
-                        if len(item) == 2 and item[0] < firstEventFound[0]:
-                            tmpl.append(item)
-                
+                        tmpt = line.strip().split()
+                        
+                        if len(tmpt) < 2:
+                            continue
+                            
+                        if tmpt[0] == "#nslot" and nslots < 0:
+                            nslots = int(tmpt[1])
+                            continue
+                        
+                        if len(tmpt) < 3:
+                            continue
+
+                        tmpstt = int(tmpt[0])
+                        tmpjid = tmpt[1]
+                        tmpsrvt = int(tmpt[2])
+                        tmpt = (tmpstt, tmpjid, tmpsrvt)
+
+                        crsr = self.buffer[qname][buffIdx]
+                        
+                        if tmpstt < crsr[0]:
+                            tmpl.append(tmpt)
+                            BasicEstimator.logger.debug('Registered %s' % str(tmpt))
+
+                        elif crsr[1] <> tmpjid:
+                            tmpl.append(tmpt)
+                            BasicEstimator.logger.debug('Registered %s' % str(tmpt))
+                            
+                        else:
+                            tmpl.append(crsr)
+                            buffIdx += 1
+                            BasicEstimator.logger.debug('Registered %s' % str(crsr))
+
                     qFile.close()
                     qFile = None
-                
-                tmpl = tmpl + self.buffer[qname]
+
+                while buffIdx < len(self.buffer[qname]):
+                    crsr = self.buffer[qname][buffIdx]
+                    tmpl.append(crsr)
+                    buffIdx += 1
+                    BasicEstimator.logger.debug('Registered %s' % str(crsr))
+
                 if len(tmpl) > self.sampleNumber:
                     del tmpl[0:len(tmpl)-self.sampleNumber]
-                
-                tmpSum = 0
-                tmpMax = -1
-                for tmpt in tmpl:
-                    tmpSum = tmpSum + tmpt[1]
-                    tmpMax = max(tmpMax, tmpt[1])
-                
-                self.setERT(qname, int(tmpSum/len(tmpl)))           
-                self.setWRT(qname, tmpMax)
-                
+
+                # number of slot is still undefined
+                # force R == K
+                if nslots < 0:
+                    nslots = self.nrun[qname]
+
+
+                if self.nrun[qname] < nslots:
+                    self.setERT(qname, 0)
+                    self.setWRT(qname, 0)
+                else:
+
+
+                    tmpAvg = 0
+                    tmpMax = -1
+                    for tmpt in tmpl:
+                        tmpAvg = tmpAvg + tmpt[2]
+                        tmpMax = max(tmpMax, tmpt[2])
+                    tmpAvg = int(tmpAvg/len(tmpl))
+                    
+                    tmpFact = int(math.ceil(float(self.nqueued[qname]) / float(nslots) + 1.0))
+
+                    self.setERT(qname, tmpFact * tmpAvg)           
+                    self.setWRT(qname, tmpFact * tmpMax)
+
                 qFile = open(qFilename, 'w')
+                qFile.write("#nslot %d\n" % nslots)
                 for tmpt in tmpl:
-                    qFile.write('%d:%d\n' % tmpt)
+                    qFile.write('%d %s %d\n' % tmpt)
                 qFile.close()
                 qFile = None
 
@@ -114,6 +203,15 @@ class BasicEstimator(DataCollector):
                     qFile.close()
                 except:
                     BasicEstimator.logger.error("Cannot close %s" % qFilename, exc_info=True)
+            
+            
+        oldQueues = os.listdir(self.storeDir)
+        for tmpq in oldQueues:
+            try:
+                if not self.buffer.has_key(tmpq):
+                    os.remove(os.path.join(self.storeDir, tmpq))
+            except:
+                BasicEstimator.logger.error("Cannot remove %s" % tmpq, exc_info=True)
 
 
 def getEstimatorList():
