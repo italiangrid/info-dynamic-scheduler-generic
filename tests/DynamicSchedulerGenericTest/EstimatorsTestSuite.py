@@ -25,14 +25,19 @@ from DynamicSchedulerGeneric import PersistentEstimators
 
 class BasicEstimatorWrapper(PersistentEstimators.BasicEstimator):
 
-    def __init__(self):
+    def __init__(self, keepfiles=False):
         self.sampleNumber = 1000
         self.storeDir = "/tmp/dynschedtest"
-        if os.path.exists(self.storeDir):
+        if os.path.exists(self.storeDir) and not keepfiles:
             shutil.rmtree(self.storeDir)
-        os.mkdir(self.storeDir)
+        if not os.path.exists(self.storeDir):
+            os.mkdir(self.storeDir)
         
+        self.now = 1000
+            
         self.buffer = dict()
+        self.nqueued = dict()
+        self.nrun = dict()
         self.localERT = dict()
         self.localWRT = dict()
 
@@ -52,84 +57,52 @@ class EstimatorsTestCase(unittest.TestCase):
     
     def test_BasicEstimator_ok(self):
 
-            estimator = BasicEstimatorWrapper()
+        estimator = BasicEstimatorWrapper()
             
-            estimator.register({'queue' : 'dteam', 'qtime' : 10, 'start' : 25})
-            estimator.register({'queue' : 'dteam', 'qtime' : 40, 'start' : 75})
-            estimator.register({'queue' : 'dteam', 'qtime' : 110, 'start' : 130})
-            estimator.register({'queue' : 'dteam', 'qtime' : 210, 'start' : 225})
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_1', 'start' : 500})
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_2', 'start' : 200})
+        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_3',})
+        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_4',})
             
-            estimator.estimate()
+        estimator.estimate()
             
-            self.assertTrue(estimator.localERT['dteam'] == 21)
+        self.assertTrue(estimator.localERT['dteam'] == 1300)
+                        
             
-
     def test_BasicEstimator_empty(self):
 
-            estimator = BasicEstimatorWrapper()
+        estimator = BasicEstimatorWrapper()
             
-            estimator.estimate()
+        estimator.estimate()
             
-            self.assertTrue(len(estimator.localERT) == 0)
-            
-
-    def test_BasicEstimator_missing_time(self):
-
-            estimator = BasicEstimatorWrapper()
-            
-            estimator.register({'queue' : 'dteam', 'qtime' : 10, 'start' : 25})
-            estimator.register({'queue' : 'dteam', 'start' : 130})
-            estimator.register({'queue' : 'dteam', 'qtime' : 210})
-            estimator.register({'queue' : 'dteam'})
-            
-            estimator.estimate()
-            
-            self.assertTrue(estimator.localERT['dteam'] == 15)
-            
-
-    def test_BasicEstimator_empty_for_missing_time(self):
-
-            estimator = BasicEstimatorWrapper()
-            
-            estimator.register({'queue' : 'dteam', 'start' : 130})
-            estimator.register({'queue' : 'dteam', 'qtime' : 210})
-            estimator.register({'queue' : 'dteam'})
-            
-            estimator.estimate()
-            
-            self.assertTrue(len(estimator.localERT) == 0)
-            
+        self.assertTrue(len(estimator.localERT) == 0)
 
 
     def test_BasicEstimator_multi_estimate(self):
-        
-            abs_offset = 10
-            rel1_offset = 20
-            rel2_offset = 40
+        estimator = BasicEstimatorWrapper()
             
-            estimator = BasicEstimatorWrapper()
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_1', 'start' : 500})
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_2', 'start' : 200})
+        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_3',})
+        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_4',})
             
-            for k in range(estimator.sampleNumber):
-                estimator.register({'queue' : 'dteam', 
-                                    'qtime' : abs_offset + k * 10,
-                                    'start' : abs_offset + rel1_offset + k * 10})
-            
-            estimator.estimate()
-            
-            self.assertTrue(estimator.localERT['dteam'] == rel1_offset)
-            
-            abs_offset = abs_offset + estimator.sampleNumber * 10 + 100
+        estimator.estimate()
 
-            for k in range(estimator.sampleNumber / 2):
-                estimator.register({'queue' : 'dteam',
-                                    'qtime' : abs_offset + k * 10,
-                                    'start' : abs_offset + rel2_offset + k * 10})
-            
-            estimator.estimate()
-            
-            self.assertTrue(estimator.localERT['dteam'] == (rel1_offset + rel2_offset)/2)
-            
-            
+        estimator = BasicEstimatorWrapper(True)
+        estimator.now = 2000
+
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_3', 'start' : 1200})
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_4', 'start' : 1700})
+        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_5',})
+        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_6',})
+        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_7',})
+        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_8',})
+        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_9',})
+        
+        estimator.estimate()
+        
+        self.assertTrue(estimator.localERT['dteam'] == 2400)
+
 
 if __name__ == '__main__':
     unittest.main()
