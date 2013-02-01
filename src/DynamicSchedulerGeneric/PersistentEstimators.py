@@ -17,7 +17,6 @@
 import sys
 import os, os.path
 import logging
-import time
 import math
 
 from DynamicSchedulerGeneric.Analyzer import DataCollector
@@ -47,7 +46,6 @@ class BasicEstimator(DataCollector):
             raise AnalyzeException("Cannot find or access directory %s" % self.storeDir)
         
         self.buffer = dict()
-        self.now = int(time.time())
         self.nqueued = dict()
         self.nrun = dict()
         
