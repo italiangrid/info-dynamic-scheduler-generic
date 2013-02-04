@@ -167,9 +167,14 @@ def process(config, collector, out=sys.stdout):
                     if collector.isSetERT(mqueue):
                         out.write("GLUE2ComputingShareEstimatedAverageWaitingTime: %d\n" 
                                   % collector.getERT(mqueue))
+                    else:
+                        out.write("GLUE2ComputingShareEstimatedAverageWaitingTime: 0\n")
+                        
                     if collector.isSetWRT(mqueue):
                         out.write("GLUE2ComputingShareEstimatedWorstWaitingTime: %d\n" 
                                   % collector.getWRT(mqueue))
+                    else:
+                        out.write("GLUE2ComputingShareEstimatedWorstWaitingTime: 0\n")
                     
                     nfreeSlots = collector.freeSlots(mqueue, policy.vo)
                     if nfreeSlots >= 0:
