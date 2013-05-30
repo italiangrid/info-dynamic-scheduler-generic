@@ -22,9 +22,39 @@ import math
 from DynamicSchedulerGeneric.Analyzer import DataCollector
 from DynamicSchedulerGeneric.Analyzer import AnalyzeException
 
+class EstRecord:
+
+    def __init__(self, *data):
+        if len(data) == 3:
+            self.startt = int(data[0])
+            self.id = data[1]
+            self.deltat = int(data[2])
+        else:
+            pTuple = data[0]
+            self.startt = int(pTuple[0])
+            self.id = pTuple[1]
+            self.deltat = int(pTuple[2])
+
+    def __cmp__(self, item):
+    
+        if self.startt < item.startt:
+            return -1
+        if self.startt > item.startt:
+            return 1
+        
+        if self.id < item.id:
+            return -1
+        if self.id > item.id:
+            return 1
+        
+        return 0
+        
+    def __repr__(self):
+        return '%d %s %d' % (self.startt, self.id, self.deltat)
+
 class BasicEstimator(DataCollector):
 
-    logger = logging.getLogger("PersistentEstimators.BasicEstimator")
+    logger = logging.getLogger("BasicEstimator")
     
     DEFAULT_STORE_DIR = "/var/tmp/info-dynamic-scheduler-generic"
     DEFAULT_SAMPLE_NUM = 1000
@@ -70,7 +100,7 @@ class BasicEstimator(DataCollector):
                     self.buffer[qname] = list()
         
                 BasicEstimator.logger.debug('Updating service time for ' + str(evndict))
-                record = (evndict['start'], evndict['jobid'], self.now - evndict['start'])
+                record = EstRecord(evndict['start'], evndict['jobid'], self.now - evndict['start'])
                 self.buffer[qname].append(record)
 
 
@@ -130,25 +160,22 @@ class BasicEstimator(DataCollector):
                         if len(tmpt) < 3:
                             continue
 
-                        tmpstt = int(tmpt[0])
-                        tmpjid = tmpt[1]
-                        tmpsrvt = int(tmpt[2])
-                        tmpt = (tmpstt, tmpjid, tmpsrvt)
-
-                        crsr = self.buffer[qname][buffIdx]
+                        tmprec = EstRecord(tmpt)
                         
-                        if tmpstt < crsr[0]:
-                            tmpl.append(tmpt)
-                            BasicEstimator.logger.debug('Registered %s' % str(tmpt))
-
-                        elif crsr[1] <> tmpjid:
-                            tmpl.append(tmpt)
-                            BasicEstimator.logger.debug('Registered %s' % str(tmpt))
+                        if buffIdx < len(self.buffer[qname]):
+                            crsr = self.buffer[qname][buffIdx]
                             
+                            if tmprec < crsr:
+                                tmpl.append(tmprec)
+                                BasicEstimator.logger.debug('Registered %s' % str(tmprec))
+                            else:
+                                tmpl.append(crsr)
+                                buffIdx += 1
+                                BasicEstimator.logger.debug('Registered %s' % str(crsr))
+                        
                         else:
-                            tmpl.append(crsr)
-                            buffIdx += 1
-                            BasicEstimator.logger.debug('Registered %s' % str(crsr))
+                            tmpl.append(tmprec)
+                            BasicEstimator.logger.debug('Registered %s' % str(tmprec))
 
                     qFile.close()
                     qFile = None
@@ -176,20 +203,24 @@ class BasicEstimator(DataCollector):
 
                     tmpAvg = 0
                     tmpMax = -1
-                    for tmpt in tmpl:
-                        tmpAvg = tmpAvg + tmpt[2]
-                        tmpMax = max(tmpMax, tmpt[2])
+                    for tmprec in tmpl:
+                        tmpAvg = tmpAvg + tmprec.deltat
+                        tmpMax = max(tmpMax, tmprec.deltat)
                     tmpAvg = int(tmpAvg/len(tmpl))
                     
                     tmpFact = int(math.ceil(float(self.nqueued[qname]) / float(nslots) + 1.0))
+
+                    BasicEstimator.logger.debug("Factor: %d" % tmpFact)
+                    BasicEstimator.logger.debug("Savg: %d" % tmpAvg)
+                    BasicEstimator.logger.debug("Smax: %d" % tmpMax)
 
                     self.setERT(qname, tmpFact * tmpAvg)           
                     self.setWRT(qname, tmpFact * tmpMax)
 
                 qFile = open(qFilename, 'w')
                 qFile.write("#nslot %d\n" % nslots)
-                for tmpt in tmpl:
-                    qFile.write('%d %s %d\n' % tmpt)
+                for tmprec in tmpl:
+                    qFile.write(str(tmprec) + "\n")
                 qFile.close()
                 qFile = None
 

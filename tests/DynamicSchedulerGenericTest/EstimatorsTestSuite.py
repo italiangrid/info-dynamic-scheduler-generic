@@ -19,6 +19,7 @@ import unittest
 import sys
 import os, os.path
 import shutil
+import logging
 
 from DynamicSchedulerGeneric import PersistentEstimators
 
@@ -80,30 +81,38 @@ class EstimatorsTestCase(unittest.TestCase):
 
     def test_BasicEstimator_multi_estimate(self):
         estimator = BasicEstimatorWrapper()
+        estimator.now = 2000
             
         estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_1', 'start' : 500})
         estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_2', 'start' : 200})
-        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_3',})
-        estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_4',})
-            
-        estimator.estimate()
-
-        estimator = BasicEstimatorWrapper(True)
-        estimator.now = 2000
-
         estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_3', 'start' : 1200})
         estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_4', 'start' : 1700})
         estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_5',})
         estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_6',})
+            
+        estimator.estimate()
+
+        estimator = BasicEstimatorWrapper(True)
+        estimator.now = 3000
+
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_3', 'start' : 1200})
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_4', 'start' : 1700})
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_5', 'start' : 2200})
+        estimator.register({'queue' : 'dteam', 'state' : 'running', 'jobid': 'crea_6', 'start' : 2400})
         estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_7',})
         estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_8',})
         estimator.register({'queue' : 'dteam', 'state' : 'queued', 'jobid': 'crea_9',})
         
         estimator.estimate()
         
-        self.assertTrue(estimator.localERT['dteam'] == 2400)
+        self.assertTrue(estimator.localERT['dteam'] == 2600)
 
 
 if __name__ == '__main__':
+    if os.path.exists('logging.conf'):
+        import logging.config
+        logging.config.fileConfig('logging.conf')
+    else:
+        logging.basicConfig()
     unittest.main()
 
