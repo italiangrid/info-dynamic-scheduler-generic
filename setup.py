@@ -23,10 +23,10 @@ class bdist_rpm(_bdist_rpm):
         srpmdir = os.path.join(topdir, 'SRPMS')
         
         cmdline = "mkdir -p %s %s %s %s %s" % (builddir, srcdir, specdir, rpmdir, srpmdir)
-        execScript(shlex.split(cmdline), stdout=sys.stdout, stderr=sys.stderr).communicate()
+        execScript(shlex.split(cmdline)).communicate()
         
         cmdline = "tar -zcf %s %s" % (os.path.join(srcdir, pkg_name + '.tar.gz'), source_items)
-        execScript(shlex.split(cmdline), stdout=sys.stdout, stderr=sys.stderr).communicate()
+        execScript(shlex.split(cmdline)).communicate()
         
         specOut = open(os.path.join(specdir, pkg_name + '.spec'),'w')
         cmdline = "sed -e 's|@PKGVERSION@|%s|g' -e 's|@PKGRELEASE@|%s|g' project/%s.spec.in" % (pkg_version, pkg_release, pkg_name)
@@ -34,7 +34,7 @@ class bdist_rpm(_bdist_rpm):
         specOut.close()
         
         cmdline = "rpmbuild -ba --define '_topdir %s' %s.spec" % (topdir, os.path.join(specdir, pkg_name))
-        execScript(shlex.split(cmdline), stdout=sys.stdout, stderr=sys.stderr).communicate()
+        execScript(shlex.split(cmdline)).communicate()
 
 setup(
       name='dynsched-generic',
