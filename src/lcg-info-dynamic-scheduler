@@ -70,7 +70,7 @@ The executable returns the following codes:
         config = DynSchedUtils.readConfigurationFromFile(cfgfile)
             
     except Exception, config_error:
-        logger.error("Cannot parse configuration file %s: %s" % (cfgfile, repr(config_err)))
+        logger.error("Cannot parse configuration file %s: %s" % (cfgfile, repr(config_error)))
         sys.exit(3)
     
     try:
