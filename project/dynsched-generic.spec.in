@@ -48,6 +48,39 @@ rm -rf %{buildroot}
 %{python_sitelib}/*.egg-info
 %endif
 
+%post
+set -e
+
+if [ $1 -eq 1 ] ; then
+    #
+    # Write a partial template for scheduler.conf
+    # This file can be overwrite manually or with YAIM
+    #
+    if [ ! -e /etc/lrms ] ; then mkdir /etc/lrms; fi
+    echo "[Main]" > /etc/lrms/scheduler.conf
+    echo "outputformat: both" >> /etc/lrms/scheduler.conf
+    echo "bdii-configfile: /etc/bdii/bdii.conf" >> /etc/lrms/scheduler.conf
+fi
+
+%triggerin -- lcg-info-dynamic-scheduler-pbs
+TMPVAR=`grep -Eo '\[LRMS\]' /etc/lrms/scheduler.conf`
+if [ ! "x${TMPVAR}" == "x" ] ; then
+    echo "[LRMS]" >> /etc/lrms/scheduler.conf
+    echo "lrms_backend_cmd: /usr/libexec/lrmsinfo-pbs" >> /etc/lrms/scheduler.conf
+    echo "[Scheduler]" >> /etc/lrms/scheduler.conf
+    echo "cycle_time : 0" >> /etc/lrms/scheduler.conf
+    echo "vo_max_jobs_cmd: /usr/libexec/vomaxjobs-maui" >> /etc/lrms/scheduler.conf
+fi
+
+%triggerin -- info-dynamic-scheduler-slurm
+TMPVAR=`grep -Eo '\[LRMS\]' /etc/lrms/scheduler.conf`
+if [ ! "x${TMPVAR}" == "x" ] ; then
+    echo "[LRMS]" >> /etc/lrms/scheduler.conf
+    echo "lrms_backend_cmd: /usr/libexec/lrmsinfo-slurm" >> /etc/lrms/scheduler.conf
+    echo "[Scheduler]" >> /etc/lrms/scheduler.conf
+    echo "cycle_time : 0" >> /etc/lrms/scheduler.conf
+fi
+
 
 
 %changelog
