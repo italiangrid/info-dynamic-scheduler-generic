@@ -27,9 +27,12 @@ class Workspace:
             self.workspace = args["workspacedir"]
         else:
             self.workspace = "/tmp/dynschedtest"
+        self.sampleDir = self.workspace + '/sampledir'
+        
         if os.path.exists(self.workspace):
             shutil.rmtree(self.workspace)
-        os.mkdir(self.workspace)            
+        os.mkdir(self.workspace)
+        os.mkdir(self.sampleDir)         
         
         self.configFilename = self.workspace + "/scheduler.conf"
         
@@ -60,7 +63,7 @@ class Workspace:
             config.set("Main", "cream_prefix", "creXX_")
             if "enableES" in args and args["enableES"] == "true":
                 config.set("Main", "es_prefix", "esXX_")
-            config.set("Main", "sample_dir", self.workspace)
+            config.set("Main", "sample_dir", self.sampleDir)
             
             if not "nomaxjobcmd" in args or args["nomaxjobcmd"] <> "true":
                 config.set("Scheduler", "vo_max_jobs_cmd", self.workspace +"/maxjobs-mock")
