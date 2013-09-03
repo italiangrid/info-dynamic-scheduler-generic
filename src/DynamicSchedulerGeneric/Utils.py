@@ -18,6 +18,8 @@ import shlex
 import subprocess
 import ConfigParser
 import imp
+import re
+import glob
 
 GLUE1FORMAT = 'glue1'
 GLUE2FORMAT = 'glue2'
@@ -145,6 +147,55 @@ def loadEstimator(config):
             modFile.close()
     
     return None
+
+
+bdiiCfgRegex = re.compile('^\s*BDII_([^=\s]+)\s*=([^$]+)$')
+
+def getBDIIConfig(bdiiConffile):
+
+    result = dict()
+    
+    cFile = None
+    try:
+        cFile = open(bdiiConffile)
+        
+        for line in cFile:
+            parsed = bdiiCfgRegex.match(line)
+            if parsed:
+                result[parsed.group(1).lower()] = parsed.group(2).strip()
+
+    finally:
+        if cFile:
+            cFile.close()
+    
+    return result
+
+
+def getLDIFFilelist(config, shortcut=None):
+
+    if config.has_option('Main','bdii-configfile'):
+        bdiiConfig = getBDIIConfig(config.get('Main', 'bdii-configfile'))
+    else:
+        bdiiConfig = getBDIIConfig('/etc/bdii/bdii.conf')
+    
+    if 'ldif_dir' in bdiiConfig:
+        ldifDir = bdiiConfig['ldif_dir']
+    else:
+        ldifDir = '/var/lib/bdii/gip/ldif'
+
+    #
+    # shortcut: check a predefined ldif-file or return all ones
+    #
+    tmpl = glob.glob(ldifDir + '/*.ldif')
+    
+    if not shortcut:
+        return tmpl
+    
+    tmpf = ldifDir + '/' + shortcut
+    
+    if shortcut in tmpl:
+        return [shortcut]
+    return tmpl
 
 
 

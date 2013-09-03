@@ -53,7 +53,9 @@ class Workspace:
                 config.set("Main", "outputformat", args["outputformat"])
             else:
                 config.set("Main", "outputformat", "both")
-                
+            
+            config.set("Main", "bdii-configfile", self.workspace + "/bdii.conf")
+            
             if not "noglue1static" in args or args["noglue1static"] <> "true":
                 config.set("Main", "static_ldif_file", self.workspace +"/static-file-CE.ldif")
             if not "noglue2static" in args or args["noglue2static"] <> "true":
@@ -80,7 +82,11 @@ class Workspace:
             cfgFile = open(self.configFilename, "w")
             config.write(cfgFile)
             cfgFile.close
-
+        
+        bdiiConffile = open(self.workspace + "/bdii.conf", 'w')
+        bdiiConffile.write("BDII_LDIF_DIR=%s\n" % self.workspace)
+        bdiiConffile.close()
+        
     def getConfigurationFile(self):
         return self.configFilename
     

@@ -17,6 +17,8 @@
 import sys
 import re
 
+from DynamicSchedulerGeneric import Utils as DynSchedUtils
+
 class GLUE1Exception(Exception):
     
     def __init__(self, msg):
@@ -26,17 +28,17 @@ class GLUE1Exception(Exception):
 ce_regex = re.compile("dn:\s*GlueCEUniqueID\s*=\s*[^$]+")
 vo_regex = re.compile("dn:\s*GlueVOViewLocalID\s*=\s*[^$]+")
 attr_regex = re.compile("(Glue\w+)\s*:\s*([^$]+)")
+chunk_key_regex = re.compile("GlueCEUniqueID\s*=\s*([^$]+)")
+acbr_regex = re.compile("(VO|VOMS)\s*:\s*([^$]+)")
     
 class ACBR:
 
     def __init__(self, acbrStr):
-        tmpl = acbrStr.split(':')
-        if len(tmpl)<2:
-            raise GLUE1Exception("Wrong format for ACBR: %s" % acbrStr)
-        self.fmt = tmpl[0].strip()
-        self.name = tmpl[1].strip()
-        if self.fmt <> 'VO' and self.fmt <> 'VOMS':
-            raise GLUE1Exception("Wrong type for ACBR: %s" % acbrStr)
+        parsed = acbr_regex.match(acbrStr)
+        if not parsed:
+            raise GLUE1Exception("Wrong ACBR definition: %s" % acbrStr)
+        self.fmt = parsed.group(1)
+        self.name = parsed.group(2).strip()
         
 class GlueCEContainer:
 
@@ -45,31 +47,7 @@ class GlueCEContainer:
         self.queue = None
         self.acbrs = set()
         
-    def load(self, line):
-    
-        tmpm = attr_regex.match(line)
-        if tmpm == None:
-            return
-            
-        key = tmpm.group(1)
-        value = tmpm.group(2)
-            
-        if key == "GlueCEName":
-            
-            self.queue = value
-                
-        elif key == 'GlueCEUniqueID':
-            
-            self.id = value
-                
-        elif key == "GlueCEAccessControlBaseRule":
-            
-            acbrItem = ACBR(value)
-            self.acbrs.add(acbrItem.name)
-
-
-        
-    def close(self):
+    def check(self):
         if not self.queue:
             raise GLUE1Exception("Missing mandatory attribute GlueCEName")
         if not self.id:
@@ -82,183 +60,175 @@ class GlueVOViewContainer:
         self.id = None
         self.name = None
         self.fkey = None
-        
-    def load(self, line):
-        tmpm = attr_regex.match(line)
-        if tmpm == None:
-            return
-            
-        key = tmpm.group(1)
-        value = tmpm.group(2)
-        
-        if key == "GlueVOViewLocalID":
-            
-            self.id = value
-            
-        elif key == "GlueChunkKey":
-        
-            tmpl = value.split('=')
-            if len(tmpl)<2:
-                raise GLUE1Exception("Wrong format for GlueChunkKey: %s" % value)
-            label = tmpl[0].strip()
-            tmpk = tmpl[1].strip()
-            if label == "GlueCEUniqueID" and len(tmpk) > 0:
-                self.fkey = tmpk
-        
-        elif key == "GlueCEAccessControlBaseRule" and self.name == None:
-            
-            # select the first valid ACBR to be the vo name
-            acbrItem = ACBR(value)
-            self.name = acbrItem.name
 
-    def close(self):
+    def check(self):
         if self.fkey == None:
             raise GLUE1Exception("Missing foreing key for GlueCEUniqueID for %s" % self.id)
         if self.name == None:
             raise GLUE1Exception("Missing ACBR for %s" % self.id)
 
 
+def parseGLUETemplate(tplFilename, glueCETable, voViewTable, ce_fkeys):
+
+    static_file = None
+
+    try:
+    
+        currGLUECE = None
+        currVOView = None
+    
+        static_file = open(tplFilename)
+        
+        for line in static_file:
+        
+            parsed = ce_regex.match(line)
+            if parsed:
+                currGLUECE = line.strip()
+                glueCETable[currGLUECE] = GlueCEContainer()
+                continue
+            
+            parsed = vo_regex.match(line)
+            if parsed:
+                currVOView = line.strip()
+                voViewTable[currVOView] = GlueVOViewContainer()
+                continue
+            
+            parsed = attr_regex.match(line)
+            if parsed:
+                key = parsed.group(1)
+                value =  parsed.group(2).strip()
+                
+                if key == "GlueCEName" and currGLUECE:
+            
+                    glueCETable[currGLUECE].queue = value
+                
+                elif key == 'GlueCEUniqueID' and currGLUECE:
+            
+                    glueCETable[currGLUECE].id = value
+                    
+                elif key == "GlueCEAccessControlBaseRule" and currGLUECE:
+                
+                    acbrItem = ACBR(value)
+                    glueCETable[currGLUECE].acbrs.add(acbrItem.name)
+                
+                elif key == "GlueVOViewLocalID" and currVOView:
+            
+                    voViewTable[currVOView].id = value
+                
+                elif key == "GlueChunkKey" and currVOView:
+                    
+                    parsed = chunk_key_regex.match(value)
+                    if parsed:
+                        voViewTable[currVOView].fkey = parsed.group(1).strip()
+                
+                elif key == "GlueCEAccessControlBaseRule" and currVOView:
+                    
+                    # select the first valid ACBR to be the vo name
+                    if voViewTable[currVOView].name == None:
+                        acbrItem = ACBR(value)
+                        voViewTable[currVOView].name = acbrItem.name
+                
+                continue
+            
+            if len(line.strip()) == 0:
+            
+                if currGLUECE:
+                    glueCETable[currGLUECE].check()
+                    tmpid = glueCETable[currGLUECE].id
+                    tmpqueue = glueCETable[currGLUECE].queue
+                    ce_fkeys[tmpid] = tmpqueue
+                
+                if currVOView:
+                    voViewTable[currVOView].check()
+
+                currGLUECE = None
+                currVOView = None
+            
+        #close cycle
+        if currGLUECE:
+            glueCETable[currGLUECE].check()
+            tmpid = glueCETable[currGLUECE].id
+            tmpqueue = glueCETable[currGLUECE].queue
+            ce_fkeys[tmpid] = tmpqueue
+                
+        if currVOView:
+            voViewTable[currVOView].check()
+
+    finally:
+        if static_file:
+            static_file.close()
 
 
 def process(config, collector, out=sys.stdout):
 
-    if not config.has_option('Main','static_ldif_file'):
-        raise GLUE1Exception("Missing static_ldif_file in configuration")
-    
-    ce_fkeys = {}
+    glueCETable = dict()
+    voViewTable = dict()
+    ce_fkeys = dict()
 
-    #
-    # Scanning static file for GlueCEUniqueID
-    #
-    gluece = None
-    static_file = None
+    ldifList = DynSchedUtils.getLDIFFilelist(config, 'static-file-CE.ldif')
+    
+    for ldifFilename in ldifList:
+        parseGLUETemplate(ldifFilename, glueCETable, voViewTable, ce_fkeys)
 
-    try:
+    for glueceDN in glueCETable:
     
-        static_file = open(config.get('Main','static_ldif_file'),'r')
-    
-        goon = True
-        while goon:
+        ceData = glueCETable[glueceDN]
         
-            tmps = static_file.readline()
-            if tmps == '':
-                goon = False
-            line = tmps.strip()
+        out.write("%s\n" % glueceDN)
         
-            if len(line) == 0:
-            
-                if gluece <> None:
-            
-                    gluece.close()
-                    
-                    ce_fkeys[gluece.id] = gluece.queue
+        nwait = collector.queuedJobsOnQueue(ceData.queue)
+        nrun = collector.runningJobsOnQueue(ceData.queue)
                 
-                    nwait = collector.queuedJobsOnQueue(gluece.queue)
+        out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
+        out.write("GlueCEStateRunningJobs: %d\n" % nrun)
+        out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
+                    
+        if collector.isSetERT(ceData.queue):
+            out.write("GlueCEStateEstimatedResponseTime: %d\n" % collector.getERT(ceData.queue))
+        else:
+            out.write("GlueCEStateEstimatedResponseTime: 0\n")
                         
-                    nrun = collector.runningJobsOnQueue(gluece.queue)
-                
-                    out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
-                    out.write("GlueCEStateRunningJobs: %d\n" % nrun)
-                    out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
+        if collector.isSetWRT(ceData.queue):
+            out.write("GlueCEStateWorstResponseTime: %d\n" % collector.getWRT(ceData.queue))
+        else:
+            out.write("GlueCEStateWorstResponseTime: 0\n")
                     
-                    if collector.isSetERT(gluece.queue):
-                        out.write("GlueCEStateEstimatedResponseTime: %d\n" 
-                                  % collector.getERT(gluece.queue))
-                    else:
-                        out.write("GlueCEStateEstimatedResponseTime: 0\n")
-                        
-                    if collector.isSetWRT(gluece.queue):
-                        out.write("GlueCEStateWorstResponseTime: %d\n" 
-                                  % collector.getWRT(gluece.queue))
-                    else:
-                        out.write("GlueCEStateWorstResponseTime: 0\n")
+        out.write("GlueCEStateFreeJobSlots: %d" % collector.free)
                     
-                    out.write("GlueCEStateFreeJobSlots: %d" % collector.free)
-                    
-                    out.write("\n");
-                
-                gluece = None
-            
-            elif ce_regex.match(line):
-        
-                gluece = GlueCEContainer()
-                out.write(line + '\n')
-            
-            elif gluece <> None:
-                gluece.load(line)
-                    
-    finally:
-        if static_file:
-            static_file.close()
+        out.write("\n");
     
-    #
-    # Scanning static file for GlueVOViewLocalID
-    #
-    gluevoview = None
-    static_file = None
-    
-    try:
-    
-        static_file = open(config.get('Main','static_ldif_file'),'r')
-    
-        goon = True
-        while goon:
-        
-            tmps = static_file.readline()
-            if tmps == '':
-                goon = False
-            line = tmps.strip()
-        
-            if len(line) == 0:
-            
-                if gluevoview <> None:
-            
-                    gluevoview.close()
-                    
-                    if not gluevoview.fkey in ce_fkeys:
-                        raise GLUE1Exception("Invalid foreign key for " + gluevoview.id)
-                    queue = ce_fkeys[gluevoview.fkey]
-                    
-                    nwait = collector.queuedJobsOnQueueForVO(queue, gluevoview.name)
 
-                    nrun = collector.runningJobsOnQueueForVO(queue, gluevoview.name)
-                    
-                    out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
-                    out.write("GlueCEStateRunningJobs: %d\n" % nrun)
-                    out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
-
-                    if collector.isSetERT(queue):
-                        out.write("GlueCEStateEstimatedResponseTime: %d\n" 
-                                  % collector.getERT(queue))
-                    else:
-                        out.write("GlueCEStateEstimatedResponseTime: 0\n")
-                    
-                    if collector.isSetWRT(queue):
-                        out.write("GlueCEStateWorstResponseTime: %d\n" 
-                                  % collector.getWRT(queue))
-                    else:
-                        out.write("GlueCEStateWorstResponseTime: 0\n")
-                    
-                    nfreeSlots = collector.freeSlots(queue, gluevoview.name)
-                    if nfreeSlots >= 0:
-                        out.write("GlueCEStateFreeJobSlots: %d" % nfreeSlots)
-
-                    out.write("\n");
-                    
-                gluevoview = None
-            
-            elif vo_regex.match(line):
+    for voviewDN in voViewTable:
         
-                gluevoview = GlueVOViewContainer()
-                out.write(line + '\n')
-            
-            elif gluevoview <> None:
-                gluevoview.load(line)
+        voData = voViewTable[voviewDN]
+
+        out.write("%s\n" % voviewDN)
+        
+        if not voData.fkey in ce_fkeys:
+            raise GLUE1Exception("Invalid foreign key for " + voviewDN)
                     
-    finally:
-        if static_file:
-            static_file.close()
-    
-    
-    
-    
+        queue = ce_fkeys[voData.fkey]
+                    
+        nwait = collector.queuedJobsOnQueueForVO(queue, voData.name)
+        nrun = collector.runningJobsOnQueueForVO(queue, voData.name)
+                    
+        out.write("GlueCEStateWaitingJobs: %d\n" % nwait)
+        out.write("GlueCEStateRunningJobs: %d\n" % nrun)
+        out.write("GlueCEStateTotalJobs: %d\n" % (nrun + nwait))
+
+        if collector.isSetERT(queue):
+            out.write("GlueCEStateEstimatedResponseTime: %d\n" % collector.getERT(queue))
+        else:
+            out.write("GlueCEStateEstimatedResponseTime: 0\n")
+                    
+        if collector.isSetWRT(queue):
+            out.write("GlueCEStateWorstResponseTime: %d\n" % collector.getWRT(queue))
+        else:
+            out.write("GlueCEStateWorstResponseTime: 0\n")
+                    
+        nfreeSlots = collector.freeSlots(queue, voData.name)
+        if nfreeSlots >= 0:
+            out.write("GlueCEStateFreeJobSlots: %d" % nfreeSlots)
+
+        out.write("\n");
+

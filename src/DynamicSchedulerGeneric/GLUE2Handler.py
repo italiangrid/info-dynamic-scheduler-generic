@@ -17,41 +17,26 @@
 import sys
 import re
 
+from DynamicSchedulerGeneric import Utils as DynSchedUtils
+
 class GLUE2Exception(Exception):
     
     def __init__(self, msg):
         Exception.__init__(self, msg)
 
 
-share_regex = re.compile("dn:\s*(GLUE2ShareID\s*=\s*[^$]+)")
+share_regex = re.compile("dn:\s*GLUE2ShareID\s*=\s*[^$]+")
 pol_regex = re.compile("dn:\s*GLUE2PolicyID\s*=\s*[^$]+")
 attr_regex = re.compile("(GLUE2\w+)\s*:\s*([^$]+)")
 
 
 class ShareContainer:
 
-    def __init__(self, dn):
-        self.dn = dn
+    def __init__(self):
         self.id = None
         self.mqueue = None
-        self.isES = False
 
-    def load(self, line):
-        tmpm = attr_regex.match(line)
-        if tmpm == None:
-            return
-            
-        key = tmpm.group(1)
-        value = tmpm.group(2)
-            
-        if key == "GLUE2ShareID":
-            self.id = value
-        elif key == 'GLUE2ComputingShareMappingQueue':
-            self.mqueue = value
-        elif key == 'GLUE2EntityOtherInfo':
-            self.isES = (value == 'ServiceType=org.ogf.emies')
-    
-    def close(self):
+    def check(self):
         if not self.id:
             raise GLUE2Exception("Missing mandatory attribute GLUE2ShareID")
         if not self.mqueue:
@@ -64,135 +49,136 @@ class PolicyContainer:
         self.vo = None
         self.fkey = None
 
-    def load(self, line):
-        tmpm = attr_regex.match(line)
-        if tmpm == None:
-            return
-            
-        key = tmpm.group(1)
-        value = tmpm.group(2)
-            
-        if key == "GLUE2PolicyUserDomainForeignKey":
-            self.vo = value
-        elif key == "GLUE2MappingPolicyShareForeignKey":
-            self.fkey = value
-    
-    def close(self):
+    def check(self):
         if not self.vo:
             raise GLUE2Exception("Missing mandatory attribute GLUE2PolicyUserDomainForeignKey")
         if not self.fkey:
             raise GLUE2Exception("Missing mandatory attribute GLUE2MappingPolicyShareForeignKey")
 
+
+def parseGLUETemplate(ldifFilename, shareTable, policyTable, share_fkeys):
+    
+    static_file = None
+    
+    try:
+    
+        currShare = None
+        currPolicy = None
+        
+        static_file = open(ldifFilename)
+        
+        for line in static_file:
+        
+            parsed = share_regex.match(line)
+            if parsed:
+                currShare = line.strip()
+                shareTable[currShare] = ShareContainer()
+                continue
+
+
+            parsed = pol_regex.match(line)
+            if parsed:
+                currPolicy = line.strip()
+                policyTable[currPolicy] = PolicyContainer()
+                continue
+
+            parsed = attr_regex.match(line)
+            if parsed:
+                key = parsed.group(1)
+                value =  parsed.group(2).strip()
+                
+                if key == 'GLUE2ShareID' and currShare:
+                
+                    shareTable[currShare].id = value
+                
+                elif key == 'GLUE2ComputingShareMappingQueue' and currShare:
+                
+                    shareTable[currShare].mqueue = value
+                
+                elif key == 'GLUE2PolicyUserDomainForeignKey' and currPolicy:
+                
+                    policyTable[currPolicy].vo = value
+                
+                elif key == 'GLUE2MappingPolicyShareForeignKey' and currPolicy:
+                
+                    policyTable[currPolicy].fkey = value
+                
+                continue
+
+            if len(line.strip()) == 0:
+            
+                if currShare:
+                    shareTable[currShare].check()
+                
+                if currPolicy:
+                    policyTable[currPolicy].check()
+                    share_fkeys[policyTable[currPolicy].fkey] = policyTable[currPolicy]
+
+                currShare = None
+                currPolicy = None
+
+        #close cycle
+        if currShare:
+            shareTable[currShare].check()
+                
+        if currPolicy:
+            policyTable[currPolicy].check()
+            share_fkeys[policyTable[currPolicy].fkey] = policyTable[currPolicy]
+        
+        for shareID in share_fkeys:
+            missing = True
+            for shareData in shareTable.values():
+                if shareID == shareData.id:
+                    missing = False
+            if missing:
+                raise GLUE2Exception("Invalid foreign key " + shareID)
+
+
+    finally:
+        if static_file:
+            static_file.close()
+
+
 def process(config, collector, out=sys.stdout):
-    if not config.has_option('Main','static_glue2_ldif_file_computingshare'):
-        raise GLUE1Exception("Missing static_glue2_ldif_file_computingshare in configuration")
     
-    share_fkeys = {}
-    
-    #
-    # Scanning static file for GLUE2ShareID
-    #
-    
-    static_file = None
-    share = None
-    
-    try:
-        static_file = open(config.get('Main','static_glue2_ldif_file_computingshare'),'r')
-        
-        goon = True
-        while goon:
-        
-            tmps = static_file.readline()
-            if tmps == '':
-                goon = False
-            line = tmps.strip()
-            
-            if len(line) == 0:
-            
-                if share <> None:
-                    share.close()
-                    share_fkeys[share.id] = share
-                
-                share = None
-            
-            tmpm = share_regex.match(line)
-            if tmpm <> None:
-                share = ShareContainer(tmpm.group(1))
-                
-            elif share <> None:
-                share.load(line)
-            
-    finally:
-        if static_file:
-            static_file.close()
+    shareTable = dict()
+    policyTable = dict()
+    share_fkeys = dict()
 
-
-
-
-    #
-    # Scanning static file for GLUE2PolicyID
-    #
-    static_file = None
-    policy = None
+    ldifList = DynSchedUtils.getLDIFFilelist(config, 'ComputingShare.ldif')
     
-    try:
-        static_file = open(config.get('Main','static_glue2_ldif_file_computingshare'),'r')
+    for ldifFilename in ldifList:
+        parseGLUETemplate(ldifFilename, shareTable, policyTable, share_fkeys)
+
+    for shareDN in shareTable:
+    
+        shareData = shareTable[shareDN]
+        policyData = share_fkeys[shareData.id]
         
-        goon = True
-        while goon:
+        out.write("%s\n" % shareDN)
         
-            tmps = static_file.readline()
-            if tmps == '':
-                goon = False
-            line = tmps.strip()
-            
-            if len(line) == 0:
-                
-                if policy <> None:
-                    policy.close()
+        nwait = collector.queuedJobsOnQueueForVO(shareData.mqueue, policyData.vo)
+        nrun = collector.runningJobsOnQueueForVO(shareData.mqueue, policyData.vo)
+        
+        out.write("GLUE2ComputingShareRunningJobs: %d\n" % nrun)
+        out.write("GLUE2ComputingShareWaitingJobs: %d\n" % nwait)
+        out.write("GLUE2ComputingShareTotalJobs: %d\n" % (nrun + nwait))
                     
-                    share_id = policy.fkey
-                    if not share_id in share_fkeys:
-                        raise GLUE2Exception("Invalid foreign key for " + share_id)
-                    mqueue = share_fkeys[share_id].mqueue
-                    
-                    nwait = collector.queuedJobsOnQueueForVO(mqueue, policy.vo)
-                    nrun = collector.runningJobsOnQueueForVO(mqueue, policy.vo)
-                    
-                    out.write("dn: %s\n" % share_fkeys[share_id].dn)
-                    out.write("GLUE2ComputingShareRunningJobs: %d\n" % nrun)
-                    out.write("GLUE2ComputingShareWaitingJobs: %d\n" % nwait)
-                    out.write("GLUE2ComputingShareTotalJobs: %d\n" % (nrun + nwait))
-                    
-                    if collector.isSetERT(mqueue):
-                        out.write("GLUE2ComputingShareEstimatedAverageWaitingTime: %d\n" 
-                                  % collector.getERT(mqueue))
-                    else:
-                        out.write("GLUE2ComputingShareEstimatedAverageWaitingTime: 0\n")
+        if collector.isSetERT(shareData.mqueue):
+            out.write("GLUE2ComputingShareEstimatedAverageWaitingTime: %d\n" % collector.getERT(shareData.mqueue))
+        else:
+            out.write("GLUE2ComputingShareEstimatedAverageWaitingTime: 0\n")
                         
-                    if collector.isSetWRT(mqueue):
-                        out.write("GLUE2ComputingShareEstimatedWorstWaitingTime: %d\n" 
-                                  % collector.getWRT(mqueue))
-                    else:
-                        out.write("GLUE2ComputingShareEstimatedWorstWaitingTime: 0\n")
+        if collector.isSetWRT(shareData.mqueue):
+            out.write("GLUE2ComputingShareEstimatedWorstWaitingTime: %d\n" % collector.getWRT(shareData.mqueue))
+        else:
+            out.write("GLUE2ComputingShareEstimatedWorstWaitingTime: 0\n")
                     
-                    nfreeSlots = collector.freeSlots(mqueue, policy.vo)
-                    if nfreeSlots >= 0:
-                        out.write("GLUE2ComputingShareFreeSlots: %d" % nfreeSlots)
-                    out.write("\n")
-                    
-                policy = None
-                
-            elif pol_regex.match(line):
-                policy = PolicyContainer()
-                
-            elif policy <> None:
-                policy.load(line)
+        nfreeSlots = collector.freeSlots(shareData.mqueue, policyData.vo)
+        if nfreeSlots >= 0:
+            out.write("GLUE2ComputingShareFreeSlots: %d" % nfreeSlots)
             
-    finally:
-        if static_file:
-            static_file.close()
-
-
+        out.write("\n")
+        
 
 
