@@ -83,10 +83,15 @@ fi
 
 chown ldap.ldap /var/tmp/info-dynamic-scheduler-generic
 
+%triggerun -- bdii
+rm -f /var/lib/bdii/gip/plugin/glite-info-dynamic-scheduler-wrapper
+
+
+
 %triggerin -- lcg-info-dynamic-scheduler-pbs
 TMPVAR=`grep -Eo '\[LRMS\]' /etc/lrms/scheduler.conf`
 if [ "x${TMPVAR}" == "x" ] ; then
-    cat << EOF > /etc/lrms/scheduler.conf
+    cat << EOF >> /etc/lrms/scheduler.conf
 [LRMS]
 lrms_backend_cmd: /usr/libexec/lrmsinfo-pbs
 [Scheduler]
@@ -96,10 +101,6 @@ EOF
     
 fi
 
-%triggerun -- bdii
-rm -f /var/lib/bdii/gip/plugin/glite-info-dynamic-scheduler-wrapper
-
-
 %triggerun -- lcg-info-dynamic-scheduler-pbs
 sed -i -e 's|\[LRMS\]||g' \
        -e 's|lrms_backend_cmd.*||g' \
@@ -107,10 +108,12 @@ sed -i -e 's|\[LRMS\]||g' \
        -e 's|cycle_time.*||g' \
        -e 's|vo_max_jobs_cmd.*||g' /etc/lrms/scheduler.conf
 
+
+
 %triggerin -- info-dynamic-scheduler-slurm
 TMPVAR=`grep -Eo '\[LRMS\]' /etc/lrms/scheduler.conf`
 if [ "x${TMPVAR}" == "x" ] ; then
-    cat << EOF > /etc/lrms/scheduler.conf
+    cat << EOF >> /etc/lrms/scheduler.conf
 [LRMS]
 lrms_backend_cmd: /usr/libexec/lrmsinfo-slurm
 [Scheduler]
