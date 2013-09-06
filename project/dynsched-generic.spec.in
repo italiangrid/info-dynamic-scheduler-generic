@@ -34,6 +34,7 @@ Output is in a format compatible with the GIP of gLite.
 rm -rf %{buildroot}
 mkdir -p %{buildroot}
 python setup.py install -O1 --prefix %{buildroot}/usr --install-data %{buildroot}
+mkdir -p %{buildroot}/var/tmp/info-dynamic-scheduler-generic
 
 %clean
 rm -rf %{buildroot}
@@ -47,6 +48,7 @@ rm -rf %{buildroot}
 %if 0%{?el6}
 %{python_sitelib}/*.egg-info
 %endif
+%dir /var/tmp/info-dynamic-scheduler-generic
 
 %post
 set -e
@@ -57,20 +59,46 @@ if [ $1 -eq 1 ] ; then
     # This file can be overwrite manually or with YAIM
     #
     if [ ! -e /etc/lrms ] ; then mkdir /etc/lrms; fi
-    echo "[Main]" > /etc/lrms/scheduler.conf
-    echo "outputformat: both" >> /etc/lrms/scheduler.conf
-    echo "bdii-configfile: /etc/bdii/bdii.conf" >> /etc/lrms/scheduler.conf
+    cat << EOF > /etc/lrms/scheduler.conf
+[Main]
+outputformat: both
+bdii-configfile: /etc/bdii/bdii.conf
+EOF
+
 fi
+
+%prerm
+rm -rf /var/tmp/info-dynamic-scheduler-generic/*
+
+%triggerin -- bdii
+INFOD_SCHED_WRAP=/var/lib/bdii/gip/plugin/glite-info-dynamic-scheduler-wrapper
+if [ ! -e ${INFOD_SCHED_WRAP} ] ; then
+    cat << EOF > ${INFOD_SCHED_WRAP}
+#!/bin/sh -l
+/usr/libexec/lcg-info-dynamic-scheduler -c /etc/lrms/scheduler.conf
+EOF
+    chmod a+x ${INFOD_SCHED_WRAP}
+
+fi
+
+chown ldap.ldap /var/tmp/info-dynamic-scheduler-generic
 
 %triggerin -- lcg-info-dynamic-scheduler-pbs
 TMPVAR=`grep -Eo '\[LRMS\]' /etc/lrms/scheduler.conf`
 if [ "x${TMPVAR}" == "x" ] ; then
-    echo "[LRMS]" >> /etc/lrms/scheduler.conf
-    echo "lrms_backend_cmd: /usr/libexec/lrmsinfo-pbs" >> /etc/lrms/scheduler.conf
-    echo "[Scheduler]" >> /etc/lrms/scheduler.conf
-    echo "cycle_time: 0" >> /etc/lrms/scheduler.conf
-    echo "vo_max_jobs_cmd: /usr/libexec/vomaxjobs-maui" >> /etc/lrms/scheduler.conf
+    cat << EOF > /etc/lrms/scheduler.conf
+[LRMS]
+lrms_backend_cmd: /usr/libexec/lrmsinfo-pbs
+[Scheduler]
+cycle_time: 0
+vo_max_jobs_cmd: /usr/libexec/vomaxjobs-maui
+EOF
+    
 fi
+
+%triggerun -- bdii
+rm -f /var/lib/bdii/gip/plugin/glite-info-dynamic-scheduler-wrapper
+
 
 %triggerun -- lcg-info-dynamic-scheduler-pbs
 sed -i -e 's|\[LRMS\]||g' \
@@ -82,10 +110,13 @@ sed -i -e 's|\[LRMS\]||g' \
 %triggerin -- info-dynamic-scheduler-slurm
 TMPVAR=`grep -Eo '\[LRMS\]' /etc/lrms/scheduler.conf`
 if [ "x${TMPVAR}" == "x" ] ; then
-    echo "[LRMS]" >> /etc/lrms/scheduler.conf
-    echo "lrms_backend_cmd: /usr/libexec/lrmsinfo-slurm" >> /etc/lrms/scheduler.conf
-    echo "[Scheduler]" >> /etc/lrms/scheduler.conf
-    echo "cycle_time : 0" >> /etc/lrms/scheduler.conf
+    cat << EOF > /etc/lrms/scheduler.conf
+[LRMS]
+lrms_backend_cmd: /usr/libexec/lrmsinfo-slurm
+[Scheduler]
+cycle_time : 0
+EOF
+
 fi
 
 %triggerun -- info-dynamic-scheduler-slurm
