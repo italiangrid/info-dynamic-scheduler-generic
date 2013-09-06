@@ -67,7 +67,7 @@ EOF
 
 fi
 
-%prerm
+%preun
 rm -rf /var/tmp/info-dynamic-scheduler-generic/*
 
 %triggerin -- bdii
