@@ -101,13 +101,6 @@ EOF
     
 fi
 
-%triggerun -- lcg-info-dynamic-scheduler-pbs
-sed -i -e 's|\[LRMS\]||g' \
-       -e 's|lrms_backend_cmd.*||g' \
-       -e 's|\[Scheduler\]||g' \
-       -e 's|cycle_time.*||g' \
-       -e 's|vo_max_jobs_cmd.*||g' /etc/lrms/scheduler.conf
-
 
 
 %triggerin -- info-dynamic-scheduler-slurm
@@ -121,12 +114,6 @@ cycle_time : 0
 EOF
 
 fi
-
-%triggerun -- info-dynamic-scheduler-slurm
-sed -i -e 's|\[LRMS\]||g' \
-       -e 's|lrms_backend_cmd.*||g' \
-       -e 's|\[Scheduler\]||g' \
-       -e 's|cycle_time.*||g' /etc/lrms/scheduler.conf
 
 
 %changelog
