@@ -149,7 +149,7 @@ def loadEstimator(config):
     return None
 
 
-bdiiCfgRegex = re.compile('^\s*BDII_([^=\s]+)\s*=([^$]+)$')
+bdiiCfgRegex = re.compile('^\s*BDII_([^=\s]+)\s*=(.+)$')
 
 def getBDIIConfig(bdiiConffile):
 

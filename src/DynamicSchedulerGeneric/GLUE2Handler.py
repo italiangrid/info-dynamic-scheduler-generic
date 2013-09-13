@@ -25,9 +25,9 @@ class GLUE2Exception(Exception):
         Exception.__init__(self, msg)
 
 
-share_regex = re.compile("dn:\s*GLUE2ShareID\s*=\s*[^$]+")
-pol_regex = re.compile("dn:\s*GLUE2PolicyID\s*=\s*[^$]+")
-attr_regex = re.compile("(GLUE2\w+)\s*:\s*([^$]+)")
+share_regex = re.compile("dn:\s*GLUE2ShareID\s*=\s*.+")
+pol_regex = re.compile("dn:\s*GLUE2PolicyID\s*=\s*.+")
+attr_regex = re.compile("(GLUE2\w+)\s*:\s*(.+)")
 
 
 class ShareContainer:

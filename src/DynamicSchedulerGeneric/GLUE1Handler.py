@@ -25,11 +25,11 @@ class GLUE1Exception(Exception):
         Exception.__init__(self, msg)
 
 
-ce_regex = re.compile("dn:\s*GlueCEUniqueID\s*=\s*[^$]+")
-vo_regex = re.compile("dn:\s*GlueVOViewLocalID\s*=\s*[^$]+")
-attr_regex = re.compile("(Glue\w+)\s*:\s*([^$]+)")
-chunk_key_regex = re.compile("GlueCEUniqueID\s*=\s*([^$]+)")
-acbr_regex = re.compile("(VO|VOMS)\s*:\s*([^$]+)")
+ce_regex = re.compile("dn:\s*GlueCEUniqueID\s*=\s*.+")
+vo_regex = re.compile("dn:\s*GlueVOViewLocalID\s*=\s*.+")
+attr_regex = re.compile("(Glue\w+)\s*:\s*(.+)")
+chunk_key_regex = re.compile("GlueCEUniqueID\s*=\s*(.+)")
+acbr_regex = re.compile("(VO|VOMS)\s*:\s*(.+)")
     
 class ACBR:
 
