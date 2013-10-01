@@ -60,7 +60,7 @@ rm -rf %{buildroot}
 %{python_sitelib}/*.egg-info
 %endif
 %dir /var/tmp/info-dynamic-scheduler-generic
-/etc/lrms/scheduler.conf
+%config(noreplace) /etc/lrms/scheduler.conf
 
 
 %preun
