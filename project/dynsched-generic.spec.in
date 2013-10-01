@@ -35,6 +35,17 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}
 python setup.py install -O1 --prefix %{buildroot}/usr --install-data %{buildroot}
 mkdir -p %{buildroot}/var/tmp/info-dynamic-scheduler-generic
+mkdir -p %{buildroot}/etc/lrms
+#
+# Write a partial template for scheduler.conf
+# This file can be overwrite manually or with YAIM
+#
+cat << EOF > %{buildroot}/etc/lrms/scheduler.conf
+[Main]
+outputformat: both
+bdii-configfile: /etc/bdii/bdii.conf
+EOF
+
 
 %clean
 rm -rf %{buildroot}
@@ -49,23 +60,8 @@ rm -rf %{buildroot}
 %{python_sitelib}/*.egg-info
 %endif
 %dir /var/tmp/info-dynamic-scheduler-generic
+/etc/lrms/scheduler.conf
 
-%post
-set -e
-
-if [ $1 -eq 1 ] ; then
-    #
-    # Write a partial template for scheduler.conf
-    # This file can be overwrite manually or with YAIM
-    #
-    if [ ! -e /etc/lrms ] ; then mkdir /etc/lrms; fi
-    cat << EOF > /etc/lrms/scheduler.conf
-[Main]
-outputformat: both
-bdii-configfile: /etc/bdii/bdii.conf
-EOF
-
-fi
 
 %preun
 rm -rf /var/tmp/info-dynamic-scheduler-generic/*
@@ -85,36 +81,6 @@ chown ldap.ldap /var/tmp/info-dynamic-scheduler-generic
 
 %triggerun -- bdii
 rm -f /var/lib/bdii/gip/plugin/glite-info-dynamic-scheduler-wrapper
-
-
-
-%triggerin -- lcg-info-dynamic-scheduler-pbs
-TMPVAR=`grep -Eo '\[LRMS\]' /etc/lrms/scheduler.conf`
-if [ "x${TMPVAR}" == "x" ] ; then
-    cat << EOF >> /etc/lrms/scheduler.conf
-[LRMS]
-lrms_backend_cmd: /usr/libexec/lrmsinfo-pbs
-[Scheduler]
-cycle_time: 0
-vo_max_jobs_cmd: /usr/libexec/vomaxjobs-maui
-EOF
-    
-fi
-
-
-
-%triggerin -- info-dynamic-scheduler-slurm
-TMPVAR=`grep -Eo '\[LRMS\]' /etc/lrms/scheduler.conf`
-if [ "x${TMPVAR}" == "x" ] ; then
-    cat << EOF >> /etc/lrms/scheduler.conf
-[LRMS]
-lrms_backend_cmd: /usr/libexec/lrmsinfo-slurm
-[Scheduler]
-cycle_time : 0
-EOF
-
-fi
-
 
 %changelog
 * Fri Aug 31 2012 CREAM group <cream-support@lists.infn.it> - @PKGVERSION@-@PKGRELEASE@
