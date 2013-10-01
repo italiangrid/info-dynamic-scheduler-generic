@@ -77,7 +77,8 @@ def parseGLUETemplate(ldifFilename, shareTable, policyTable, share_fkeys):
 
 
             parsed = pol_regex.match(line)
-            if parsed:
+            # Ignore policy for endpoint in case
+            if parsed and line.find('GLUE2ShareId=') > 0:
                 currPolicy = line.strip()
                 policyTable[currPolicy] = PolicyContainer()
                 continue

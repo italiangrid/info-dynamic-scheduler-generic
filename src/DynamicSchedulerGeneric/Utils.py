@@ -193,8 +193,9 @@ def getLDIFFilelist(config, shortcut=None):
     
     tmpf = ldifDir + '/' + shortcut
     
-    if shortcut in tmpl:
-        return [shortcut]
+    if tmpf in tmpl:
+        return [tmpf]
+    
     return tmpl
 
 
