@@ -78,7 +78,7 @@ def parseGLUETemplate(ldifFilename, shareTable, policyTable, share_fkeys):
 
             parsed = pol_regex.match(line)
             # Ignore policy for endpoint in case
-            if parsed and line.find('GLUE2ShareId=') > 0:
+            if parsed and line.find('GLUE2Share') > 0:
                 currPolicy = line.strip()
                 policyTable[currPolicy] = PolicyContainer()
                 continue
@@ -177,7 +177,7 @@ def process(config, collector, out=sys.stdout):
                     
         nfreeSlots = collector.freeSlots(shareData.mqueue, policyData.vo)
         if nfreeSlots >= 0:
-            out.write("GLUE2ComputingShareFreeSlots: %d" % nfreeSlots)
+            out.write("GLUE2ComputingShareFreeSlots: %d\n" % nfreeSlots)
             
         out.write("\n")
         

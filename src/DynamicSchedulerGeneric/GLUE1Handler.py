@@ -193,7 +193,7 @@ def process(config, collector, out=sys.stdout):
         else:
             out.write("GlueCEStateWorstResponseTime: 0\n")
                     
-        out.write("GlueCEStateFreeJobSlots: %d" % collector.free)
+        out.write("GlueCEStateFreeJobSlots: %d\n" % collector.free)
                     
         out.write("\n");
     
@@ -228,7 +228,7 @@ def process(config, collector, out=sys.stdout):
                     
         nfreeSlots = collector.freeSlots(queue, voData.name)
         if nfreeSlots >= 0:
-            out.write("GlueCEStateFreeJobSlots: %d" % nfreeSlots)
+            out.write("GlueCEStateFreeJobSlots: %d\n" % nfreeSlots)
 
         out.write("\n");
 

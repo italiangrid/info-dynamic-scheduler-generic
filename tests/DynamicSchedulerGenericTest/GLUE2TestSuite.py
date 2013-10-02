@@ -110,7 +110,7 @@ GLUE2ComputingShareMappingQueue: creamtest1
     def test_process_missing_share(self):
         try:
             ldif = """
-dn: GLUE2PolicyID=creamtest1_dteam_abc_policy,GLUE2ShareId=creamtest1_dteam_abc,GLUE2ServiceID=abc,GLUE2GroupID=resource,o=glue
+dn: GLUE2PolicyID=creamtest1_dteam_abc_policy,GLUE2ShareID=creamtest1_dteam_abc,GLUE2ServiceID=abc,GLUE2GroupID=resource,o=glue
 GLUE2PolicyUserDomainForeignKey: dteam
 GLUE2MappingPolicyShareForeignKey: creamtest1_dteam_abc
 
