@@ -193,7 +193,8 @@ def process(config, collector, out=sys.stdout):
         else:
             out.write("GlueCEStateWorstResponseTime: 0\n")
                     
-        out.write("GlueCEStateFreeJobSlots: %d\n" % collector.free)
+        if collector.free >= 0:
+            out.write("GlueCEStateFreeJobSlots: %d\n" % collector.free)
                     
         out.write("\n");
     
