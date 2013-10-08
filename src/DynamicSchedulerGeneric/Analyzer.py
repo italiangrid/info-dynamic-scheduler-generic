@@ -189,7 +189,6 @@ class DataHandler(Thread):
     def run(self):
     
         try:
-            tmpc = 0
             line = self.stream.readline();
             while line:
         
@@ -199,23 +198,16 @@ class DataHandler(Thread):
                     value = pmatch.group(2)
                     if key == 'nactive':
                         self.collector.active = int(value)
-                        tmpc |= 1
                     elif key == 'nfree':
                         self.collector.free = int(value)
-                        tmpc |= 2
                     elif key == 'now':
                         self.collector.now = int(value)
-                        tmpc |= 4
                     elif key == 'schedcycle':
                         self.collector.cycle = int(value)
-                        tmpc |= 8
 
                 ematch = self.evn_re.match(line)
                 if ematch:
                 
-                    if tmpc < 15:
-                        raise Exception("Missing attributes before job table")
-                        
                     try:
                         self.collector.load(ematch.group(1))
                     except AnalyzeException, collect_error:
