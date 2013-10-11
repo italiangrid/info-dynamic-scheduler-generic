@@ -83,10 +83,10 @@ chown ldap.ldap /var/tmp/info-dynamic-scheduler-generic
 rm -f /var/lib/bdii/gip/plugin/glite-info-dynamic-scheduler-wrapper
 
 %changelog
-* Fri Aug 31 2012 CREAM group <cream-support@lists.infn.it> - @PKGVERSION@-@PKGRELEASE@
+* Thu Oct 31 2013 CREAM group <cream-support@lists.infn.it> - @PKGVERSION@-@PKGRELEASE@
 - New package structure: configuration file and triggers for bdii
 
-* Fri Aug 31 2012 CREAM group <cream-support@lists.infn.it> - 2.5.2-2
+* Fri Aug 30 2013 CREAM group <cream-support@lists.infn.it> - 2.5.2-2
 - Fixed bug https://issues.infn.it/jira/browse/CREAM-77
 - Fixed bug https://issues.infn.it/jira/browse/CREAM-99
 
