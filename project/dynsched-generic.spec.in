@@ -80,10 +80,15 @@ fi
 chown ldap.ldap /var/tmp/info-dynamic-scheduler-generic
 
 %triggerun -- bdii
-rm -f /var/lib/bdii/gip/plugin/glite-info-dynamic-scheduler-wrapper
+if [ $1 == 0 -o $2 == 0 ] ; then
+    rm -f /var/lib/bdii/gip/plugin/glite-info-dynamic-scheduler-wrapper
+fi
 
 %changelog
-* Thu Oct 31 2013 CREAM group <cream-support@lists.infn.it> - @PKGVERSION@-@PKGRELEASE@
+* Fri May 30 2013 CREAM group <cream-support@lists.infn.it> - @PKGVERSION@-@PKGRELEASE@
+- Fixed bug https://issues.infn.it/jira/browse/CREAM-138
+
+* Thu Oct 31 2013 CREAM group <cream-support@lists.infn.it> - 2.5.3-2
 - New package structure: configuration file and triggers for bdii
 
 * Fri Aug 30 2013 CREAM group <cream-support@lists.infn.it> - 2.5.2-2
