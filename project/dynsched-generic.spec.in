@@ -85,7 +85,7 @@ if [ $1 == 0 -o $2 == 0 ] ; then
 fi
 
 %changelog
-* Fri May 30 2013 CREAM group <cream-support@lists.infn.it> - @PKGVERSION@-@PKGRELEASE@
+* Fri May 30 2014 CREAM group <cream-support@lists.infn.it> - @PKGVERSION@-@PKGRELEASE@
 - Fixed bug https://issues.infn.it/jira/browse/CREAM-138
 
 * Thu Oct 31 2013 CREAM group <cream-support@lists.infn.it> - 2.5.3-2
