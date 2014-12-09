@@ -146,7 +146,8 @@ def process(config, collector, out=sys.stdout):
     policyTable = dict()
     share_fkeys = dict()
 
-    ldifList = DynSchedUtils.getLDIFFilelist(config, 'ComputingShare.ldif')
+    ldifList = DynSchedUtils.getLDIFFilelist(config, 'ComputingShare.ldif', 
+                                             'static_glue2_ldif_file_computingshare')
     
     for ldifFilename in ldifList:
         parseGLUETemplate(ldifFilename, shareTable, policyTable, share_fkeys)

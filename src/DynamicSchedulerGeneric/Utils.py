@@ -171,7 +171,10 @@ def getBDIIConfig(bdiiConffile):
     return result
 
 
-def getLDIFFilelist(config, shortcut=None):
+def getLDIFFilelist(config, shortcut=None, custom_path_tag=None):
+
+    if custom_path_tag and config.has_option('Main', custom_path_tag):
+        return [config.get('Main', custom_path_tag)]
 
     if config.has_option('Main','bdii-configfile'):
         bdiiConfig = getBDIIConfig(config.get('Main', 'bdii-configfile'))

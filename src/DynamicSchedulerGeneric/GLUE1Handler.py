@@ -165,7 +165,7 @@ def process(config, collector, out=sys.stdout):
     voViewTable = dict()
     ce_fkeys = dict()
 
-    ldifList = DynSchedUtils.getLDIFFilelist(config, 'static-file-CE.ldif')
+    ldifList = DynSchedUtils.getLDIFFilelist(config, 'static-file-CE.ldif', 'static_ldif_file')
     
     for ldifFilename in ldifList:
         parseGLUETemplate(ldifFilename, glueCETable, voViewTable, ce_fkeys)
