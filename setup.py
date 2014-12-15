@@ -6,7 +6,7 @@ from distutils.core import setup
 from distutils.command.bdist_rpm import bdist_rpm as _bdist_rpm
 
 pkg_name = 'dynsched-generic'
-pkg_version = '2.5.4'
+pkg_version = '2.5.5'
 pkg_release = '1'
 
 source_items = "setup.py src tests"
