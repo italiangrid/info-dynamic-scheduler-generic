@@ -56,7 +56,7 @@ rm -rf %{buildroot}
 %{python_sitelib}/DynamicSchedulerGeneric/*.py
 %{python_sitelib}/DynamicSchedulerGeneric/*.pyc
 %{python_sitelib}/DynamicSchedulerGeneric/*.pyo
-%if 0%{?el6}
+%if ! 0%{?el5}
 %{python_sitelib}/*.egg-info
 %endif
 %dir /var/tmp/info-dynamic-scheduler-generic
